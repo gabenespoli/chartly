@@ -15,10 +15,6 @@ BARMODES = {
 }
 
 
-def _popover_chart_options_style():
-    return '<div style="height: 28px;"></div>'
-
-
 class Chart:
     def __init__(
         self,
@@ -68,9 +64,13 @@ class Chart:
         cc[0].markdown(f"<h1>| {title}</h1>", unsafe_allow_html=True)
         return cc
 
+    @staticmethod
+    def _popover_chart_options_style():
+        return '<div style="height: 28px;"></div>'
+
     def get_options(self):
         cc = self.header(self.title)
-        cc[4].write(_popover_chart_options_style(), unsafe_allow_html=True)
+        cc[4].write(self._popover_chart_options_style(), unsafe_allow_html=True)
         pp = cc[4].popover("Options")
 
         self.graph_type = pp.selectbox(
@@ -386,9 +386,9 @@ class Chart:
             if idx > first_idx:
                 val0 = val
 
-            period["title"] = (
-                f'{period["x0"] + relativedelta(months=1, day=1)} – {period["x1"] + relativedelta(day=31)}'
-            )
+            period[
+                "title"
+            ] = f'{period["x0"] + relativedelta(months=1, day=1)} – {period["x1"] + relativedelta(day=31)}'
 
             val = (
                 self.data.filter(
