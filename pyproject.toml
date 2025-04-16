@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chartly"
+version = "0.0.1"
+description = "Utils for plotly and streamlit"
+readme = "README.md"
+requires-python = ">=3.7"
+authors = [
+    {name = "Gabe Nespoli", email = "gabenespoli@gmail.com"}
+]
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.black]
+target-version = ["py311"]
+
+[tool.isort]
+line_length=88
+force_single_line=true
