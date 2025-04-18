@@ -489,7 +489,10 @@ def sankey(
     node_list = nodes["node"].to_list()
 
     def add_link(
-        links: pd.DataFrame(), source: str, target: str, value: int
+        links: pd.DataFrame,
+        source: str,
+        target: str,
+        value: int,
     ) -> pd.DataFrame:
         row = dict()
         row["source"] = source
