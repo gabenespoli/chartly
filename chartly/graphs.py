@@ -93,7 +93,7 @@ def any(
     pre_agg_for_text_auto: bool = True,
     agg_func: str = "sum",
     graph_type: str = "bar",
-    colormaps: dict = None,
+    colormaps: dict = {},
     **kwargs,
 ):
     """
@@ -107,6 +107,7 @@ def any(
         pre_agg_for_text_auto: Pre-aggregate the data to get the proper text_auto
             values.
     """
+    colormaps = colormaps or {}
 
     group_col = kwargs.get("x")
     value_col = kwargs.get("y")
