@@ -61,9 +61,12 @@ class Chart:
         self.colormaps = colormaps
         self.date_col = date_col
         self.date_grouping = date_grouping
+        self.data_chart = self.data
 
         self.map_hover_cols = map_hover_cols
         self.map_hover_name = map_hover_name
+        self.data_nomap = None
+        self.data_nosize = None
 
         self.graph_types = ["bar", "line", "scatter", "donut", "sunburst"]
         if "lat" in data.columns and "lon" in data.columns:
@@ -209,29 +212,28 @@ class Chart:
         map_theme: str = None,  # Light or Dark
         **kwargs,
     ):
-        df = self.group_by_date(
+        self.data_chart = self.group_by_date(
             self.data,
             date_grouping=self.date_grouping,
             date_col=self.date_col,
             grp_col=self.color,
         )
+        df = self.data_chart
         if self.graph_type == "map":
             if "lat" not in df.columns or "lon" not in df.columns:
                 st.error("Map requires lat and lon columns")
                 return
 
-            data_nomap = df.filter((col("lat").is_null()) | (col("lon").is_null()))
-            data_map = df.filter(~(col("lat").is_null()) & ~(col("lon").is_null()))
+            self.data_nomap = df.filter((col("lat").is_null()) | (col("lon").is_null()))
+            df = df.filter(~(col("lat").is_null()) & ~(col("lon").is_null()))
             if self.size:
-                data_nosize = data_map.filter(
+                self.data_nosize = df.filter(
                     (col(self.size).is_null()) | (col(self.size) <= 0)
                 )
-                data_map = data_map.filter(
-                    ~(col(self.size).is_null()) & ~(col(self.size) <= 0)
-                )
+                df = df.filter(~(col(self.size).is_null()) & ~(col(self.size) <= 0))
 
             self.fig = graphs.map(
-                data_map,
+                df,
                 size_col=self.size,
                 color_col=self.color,
                 legend_hide_title=True,
@@ -312,12 +314,35 @@ class Chart:
         else:
             st.error("Figure is not updated. Call Chart.update_figure() first.")
 
-    def show_data(self):
-        with st.expander(
-            f"{self.title} Data ({self.data.to_pandas().shape[0]} records)",
-            expanded=False,
-        ):
-            st.dataframe(self.data)
+    @staticmethod
+    def data_expander(df: Union[pd.DataFrame, pl.DataFrame], title: str, **kwargs):
+        with st.expander(f"{title} ({df.shape[0]} records)", **kwargs):
+            st.dataframe(df)
+
+    def show_data(
+        self,
+        raw_data: bool = True,
+        chart_data: bool = False,
+        map_data: bool = True,
+        **kwargs,  # passed to st.expander()
+    ):
+        """
+        raw_data: If True, show the raw data.
+        chart_data: If True, show the grouped/aggregated chart data.
+        map_data: If True, and graph_type is map, show the data that has missing values,
+            preventing it from being shown on the map.
+        """
+        if raw_data:
+            self.data_expander(self.data, f"{self.title} data", **kwargs)
+        if chart_data:
+            self.data_expander(self.data_chart, f"{self.title} chart data", **kwargs)
+        if map_data and self.graph_type == "map":
+            self.data_expander(
+                self.data_nomap, f"{self.title} data missing lat/lon", **kwargs
+            )
+            self.data_expander(
+                self.data_nosize, f"{self.title} data missing {self.size}", **kwargs
+            )
 
     def highlight_monthly_regions(
         self,
