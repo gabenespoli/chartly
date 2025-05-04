@@ -79,7 +79,7 @@ def _get_height(df, kwargs: dict) -> dict:
     return 800 if nunique > 4 else default_height
 
 
-def any(
+def graph(
     df,
     legend_reversed: bool = False,
     # legend_bottom: bool = False,

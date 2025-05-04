@@ -230,7 +230,7 @@ class Chart:
                 else {}
             )
 
-            self.fig = graphs.any(
+            self.fig = graphs.graph(
                 self.data,
                 y=self.y,
                 x=self.x,
