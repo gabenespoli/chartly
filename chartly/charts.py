@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Union
 
 import pandas as pd
 import polars as pl
@@ -12,6 +13,15 @@ BARMODES = {
     "grouped": "group",
     "stacked": "stack",
     "overlaid": "relative",
+}
+
+DATE_GROUPING_MAP = {
+    "Daily": "1d",
+    "Weekly": "1w",
+    "Bi-Weekly": "2w",
+    "Monthly": "1mo",
+    "Quarterly": "1q",
+    "Yearly": "1y",
 }
 
 
@@ -29,6 +39,8 @@ class Chart:
         default_x: str = None,
         default_color: str = None,
         colormaps: dict = None,
+        date_col: str = None,
+        date_grouping: str = None,
         map_hover_cols: list = None,
         map_hover_name: str = None,
     ):
@@ -44,9 +56,12 @@ class Chart:
 
         self.default_y = default_y or self.y_opts[0]
         self.default_x = default_x or self.x_opts[0]
-        self.default_color = default_color or None
+        self.default_color = default_color
 
         self.colormaps = colormaps
+        self.date_col = date_col
+        self.date_grouping = date_grouping
+
         self.map_hover_cols = map_hover_cols
         self.map_hover_name = map_hover_name
 
@@ -67,6 +82,37 @@ class Chart:
     @staticmethod
     def _popover_chart_options_style():
         return '<div style="height: 28px;"></div>'
+
+    @staticmethod
+    def group_by_date(
+        df: Union[pd.DataFrame, pl.DataFrame],
+        date_grouping: str,
+        date_col: str = "Datetime",
+        grp_col: str = None,
+    ) -> pd.DataFrame:
+        if date_grouping is None:
+            return df
+        if isinstance(df, pd.DataFrame):
+            df = df.set_index(date_col)
+            grp = [pd.Grouper(freq=DATE_GROUPING_MAP[date_grouping])]
+            if grp_col is not None:
+                grp = grp + [grp_col]
+            df = df.groupby(grp)["Amount"].sum().reset_index()
+        elif isinstance(df, pl.DataFrame):
+            df = df.sort(grp_col, date_col)
+            df = df.group_by_dynamic(
+                date_col,
+                every=DATE_GROUPING_MAP[date_grouping],
+                group_by=grp_col,
+            ).agg(col("Amount").sum())
+        return df
+
+    def get_date_grouping(self, default: str = "Monthly"):
+        self.date_grouping = st.selectbox(
+            label="Date grouping",
+            options=[None, *DATE_GROUPING_MAP.keys()],
+            index=list(DATE_GROUPING_MAP.keys()).index(default) + 1,
+        )
 
     def get_options(self):
         cc = self.header(self.title)
@@ -163,17 +209,19 @@ class Chart:
         map_theme: str = None,  # Light or Dark
         **kwargs,
     ):
+        df = self.group_by_date(
+            self.data,
+            date_grouping=self.date_grouping,
+            date_col=self.date_col,
+            grp_col=self.color,
+        )
         if self.graph_type == "map":
-            if "lat" not in self.data.columns or "lon" not in self.data.columns:
+            if "lat" not in df.columns or "lon" not in df.columns:
                 st.error("Map requires lat and lon columns")
                 return
 
-            data_nomap = self.data.filter(
-                (col("lat").is_null()) | (col("lon").is_null())
-            )
-            data_map = self.data.filter(
-                ~(col("lat").is_null()) & ~(col("lon").is_null())
-            )
+            data_nomap = df.filter((col("lat").is_null()) | (col("lon").is_null()))
+            data_map = df.filter(~(col("lat").is_null()) & ~(col("lon").is_null()))
             if self.size:
                 data_nosize = data_map.filter(
                     (col(self.size).is_null()) | (col(self.size) <= 0)
@@ -196,7 +244,7 @@ class Chart:
 
         elif self.graph_type == "donut":
             self.fig = graphs.donut(
-                self.data,
+                df,
                 values=self.y,
                 names=self.x,
                 facet_col=self.facet_col,
@@ -216,7 +264,7 @@ class Chart:
             if colormaps:
                 color_discrete_map = colormaps.get(self.color)
             self.fig = graphs.sunburst(
-                self.data,
+                df,
                 path=path,
                 color=self.color,
                 height=self.height,
@@ -231,7 +279,7 @@ class Chart:
             )
 
             self.fig = graphs.graph(
-                self.data,
+                df,
                 y=self.y,
                 x=self.x,
                 color=self.color,
@@ -386,9 +434,9 @@ class Chart:
             if idx > first_idx:
                 val0 = val
 
-            period[
-                "title"
-            ] = f'{period["x0"] + relativedelta(months=1, day=1)} – {period["x1"] + relativedelta(day=31)}'
+            period["title"] = (
+                f'{period["x0"] + relativedelta(months=1, day=1)} – {period["x1"] + relativedelta(day=31)}'
+            )
 
             val = (
                 self.data.filter(
