@@ -60,7 +60,7 @@ class Chart:
 
     @staticmethod
     def header(title: str):
-        cc = st.columns([4, 2, 2, 2, 1])
+        cc = st.columns([8, 4, 4, 4, 3])
         cc[0].markdown(f"<h1>| {title}</h1>", unsafe_allow_html=True)
         return cc
 
