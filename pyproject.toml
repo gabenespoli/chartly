@@ -16,6 +16,12 @@ dynamic = ["dependencies"]
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
+[project.optional-dependencies]
+dev = [
+    "black>=23.0",
+    "isort>=5.12",
+]
+
 [tool.black]
 target-version = ["py311"]
 
