@@ -11,7 +11,8 @@ from polars import col
 FONT_SIZE = 16
 
 
-def millify(n, precision=2, drop_nulls=True, prefixes=[]):
+def millify(n, precision=2, drop_nulls=True, prefixes=None):
+    prefixes = prefixes or []
     # https://github.com/azaitsev/millify
     millnames = ["", "k", "M", "B", "T", "P", "E", "Z", "Y"]
     if prefixes:
@@ -37,7 +38,7 @@ def _add_category_orders(
     df,
     plot_vars: list,
     kwargs: dict,
-    colormaps: dict = {},
+    colormaps: dict = None,
 ) -> dict:
     """Set category orders based on the order in the color map.
     Otherwise sort the values alphabetically.
@@ -410,7 +411,7 @@ def map(
     size_col: str = None,
     color_col: str = None,
     map_theme: str = "Light",
-    hover_cols: list = [],
+    hover_cols: list = None,
     hover_name: str = None,
     legend_hide_title: bool = False,
     lat_col: str = "lat",  # BillingLatitude
@@ -419,6 +420,7 @@ def map(
     colormaps: dict = None,
     **_,
 ):
+    hover_cols = hover_cols or []
     geo_info = get_geo_info(country)
 
     if lat_col is not None:

@@ -9,7 +9,7 @@ from chartly import utils
 
 
 class Filter:
-    def __init__(self, id: str, filters: dict = {}, label_visibility: str = "visible"):
+    def __init__(self, id: str, filters: dict = None, label_visibility: str = "visible"):
         """
         Args:
             id: A unique identifier for the filter. This is required for using the
@@ -18,7 +18,7 @@ class Filter:
             filters: A dictionary of filters.
         """
         self.id = id
-        self.filters = filters
+        self.filters = filters or {}
         self.label_visibility = label_visibility  # visible, collapsed, or hidden
         self.col_names = {}
         self.filter_types = {}
