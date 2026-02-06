@@ -1,3 +1,8 @@
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 from typing import Union
 
 import pandas as pd
@@ -9,7 +14,12 @@ from chartly import utils
 
 
 class Filter:
-    def __init__(self, id: str, filters: dict = None, label_visibility: str = "visible"):
+    def __init__(
+        self,
+        id: str,
+        filters: Optional[Dict[str, Any]] = None,
+        label_visibility: str = "visible",
+    ) -> None:
         """
         Args:
             id: A unique identifier for the filter. This is required for using the
@@ -27,15 +37,15 @@ class Filter:
     def selectbox(
         self,
         label: str,
-        options: list,
-        default=None,
-        col_name: str = None,
-        placeholder: str = None,
-        label_visibility: str = None,
+        options: List[Any],
+        default: Any = None,
+        col_name: Optional[str] = None,
+        placeholder: Optional[str] = None,
+        label_visibility: Optional[str] = None,
         filter_type: str = "eq",  # eq, gte, lte, gt, lt
-        bypass_option=None,
-        **kwargs,
-    ):
+        bypass_option: Any = None,
+        **kwargs: Any,
+    ) -> None:
         """Add a filter to the self.filters dictionary using a streamlit selectbox
         widget."""
         self.col_names[label] = col_name or label
@@ -56,15 +66,16 @@ class Filter:
     def multiselect(
         self,
         label: str,
-        options: list,
-        default: list = [],
-        col_name: str = None,
-        placeholder: str = None,
-        label_visibility: str = None,
-        **kwargs,
-    ):
+        options: List[Any],
+        default: Optional[List[Any]] = None,
+        col_name: Optional[str] = None,
+        placeholder: Optional[str] = None,
+        label_visibility: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
         """Add a filter to the self.filters dictionary using a streamlit multiselect
         widget."""
+        default = default or []
         self.col_names[label] = col_name or label
         key = f"{self.id}_{label}"
         self.filters[label] = st.multiselect(
@@ -78,7 +89,7 @@ class Filter:
         )
 
     @staticmethod
-    def list(items: list) -> str:
+    def list(items: List[str]) -> str:
         """Takes a python list and returns a SQL list.
 
         Args:
@@ -115,11 +126,11 @@ class Filter:
         return where_or_and + " " + " and ".join(filter_list)
 
 
-def hash_func(obj: Filter):
+def hash_func(obj: Filter) -> str:
     return obj.filter_sql()
 
 
-def combine_filters(filter1: Filter, filter2: Filter) -> Filter:
+def combine_filters(filter1: Optional[Filter], filter2: Optional[Filter]) -> Optional[Filter]:
     """Combine two filters into a single filter.
     If same key exists in both, prefer the first filter, unless it is empty then use the
     second filter.
@@ -155,9 +166,9 @@ def combine_filters(filter1: Filter, filter2: Filter) -> Filter:
 def filter_data(
     df: pl.DataFrame,
     flt: Filter,
-    names: Union[str, list] = None,
+    names: Optional[Union[str, List[str]]] = None,
     return_size_too: bool = False,
-) -> pl.DataFrame:
+) -> Union[pl.DataFrame, Tuple[pl.DataFrame, Dict[str, int]]]:
     """
     names: A subset of filter keys to filter.
     return_size_too: If True, return a tuple with first the filtered dataframe, and

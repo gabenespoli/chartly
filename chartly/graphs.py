@@ -1,6 +1,11 @@
 from decimal import Decimal
 from math import floor
 from math import log10
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Union
 
 import pandas as pd
 import plotly.express as px
@@ -11,7 +16,12 @@ from polars import col
 FONT_SIZE = 16
 
 
-def millify(n, precision=2, drop_nulls=True, prefixes=None):
+def millify(
+    n: Union[int, float],
+    precision: int = 2,
+    drop_nulls: bool = True,
+    prefixes: Optional[List[str]] = None,
+) -> str:
     prefixes = prefixes or []
     # https://github.com/azaitsev/millify
     millnames = ["", "k", "M", "B", "T", "P", "E", "Z", "Y"]
@@ -35,11 +45,11 @@ def millify(n, precision=2, drop_nulls=True, prefixes=None):
 
 
 def _add_category_orders(
-    df,
-    plot_vars: list,
-    kwargs: dict,
-    colormaps: dict = None,
-) -> dict:
+    df: Union[pd.DataFrame, pl.DataFrame],
+    plot_vars: List[str],
+    kwargs: Dict[str, Any],
+    colormaps: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Set category orders based on the order in the color map.
     Otherwise sort the values alphabetically.
     """
@@ -68,7 +78,7 @@ def _add_category_orders(
     return kwargs
 
 
-def _get_height(df, kwargs: dict) -> dict:
+def _get_height(df: Union[pd.DataFrame, pl.DataFrame], kwargs: Dict[str, Any]) -> int:
     """Adjust graph height based on the number of categories that will be plotted with
     facet_row"""
     default_height = 550
@@ -82,22 +92,22 @@ def _get_height(df, kwargs: dict) -> dict:
 
 
 def graph(
-    df,
+    df: Union[pd.DataFrame, pl.DataFrame],
     legend_reversed: bool = False,
     # legend_bottom: bool = False,
     # showlegend: bool = True,
     # sort: bool = False,
     legend_hide_title: bool = True,
     font_size: int = FONT_SIZE,
-    text_auto: str = None,
+    text_auto: Optional[Union[str, bool]] = None,
     color_matches_xy: bool = False,
     sort_legend_by_value: bool = False,
     pre_agg_for_text_auto: bool = True,
     agg_func: str = "sum",
     graph_type: str = "bar",
-    colormaps: dict = {},
-    **kwargs,
-):
+    colormaps: Optional[Dict[str, Any]] = None,
+    **kwargs: Any,
+) -> go.Figure:
     """
     Args:
         legend_reversed: Reverse the order of the legend so it matches the order of the
@@ -252,17 +262,17 @@ def graph(
 
 
 def donut(
-    *args,
+    *args: Any,
     legend_reversed: bool = False,
     legend_bottom: bool = False,
     showlegend: bool = True,
     sort: bool = False,
     legend_hide_title: bool = False,
     font_size: int = FONT_SIZE,
-    colormaps: dict = None,
+    colormaps: Optional[Dict[str, Any]] = None,
     hole: float = 0.35,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> go.Figure:
     """
     - automatically looks for the names, facet_col, and facet_row args, and uses the
     colors module to set color maps and category orders
@@ -333,7 +343,7 @@ def donut(
     return fig
 
 
-def get_geo_info(country: str):
+def get_geo_info(country: Optional[str]) -> Dict[str, Any]:
     geo_infos = {
         "CA": dict(
             scope="north america",
@@ -407,20 +417,20 @@ def get_geo_info(country: str):
 
 
 def map(
-    df,
-    country: str = None,
-    size_col: str = None,
-    color_col: str = None,
+    df: pl.DataFrame,
+    country: Optional[str] = None,
+    size_col: Optional[str] = None,
+    color_col: Optional[str] = None,
     map_theme: str = "Light",
-    hover_cols: list = None,
-    hover_name: str = None,
+    hover_cols: Optional[List[str]] = None,
+    hover_name: Optional[str] = None,
     legend_hide_title: bool = False,
     lat_col: str = "lat",  # BillingLatitude
     lon_col: str = "lon",  # BillingLongitude
     font_size: int = FONT_SIZE,
-    colormaps: dict = None,
-    **_,
-):
+    colormaps: Optional[Dict[str, Any]] = None,
+    **_: Any,
+) -> go.Figure:
     hover_cols = hover_cols or []
     geo_info = get_geo_info(country)
 
@@ -465,8 +475,12 @@ def map(
 
 
 def sankey(
-    df: pd.DataFrame, node1: str, node2: str, node0: str = "Total", cmap: dict = None
-):
+    df: pd.DataFrame,
+    node1: str,
+    node2: str,
+    node0: str = "Total",
+    cmap: Optional[Dict[str, str]] = None,
+) -> go.Figure:
     """Easily draw a 3-level sankey from dataframe columns.
 
     By default, the first level of the sankey is all rows. Specify two columns, node1
@@ -544,12 +558,12 @@ def sankey(
     return fig
 
 
-def sunburst(df, **kwargs):
+def sunburst(df: Union[pd.DataFrame, pl.DataFrame], **kwargs: Any) -> go.Figure:
     fig = px.sunburst(df, **kwargs)
     return fig
 
 
-def waterfall(sv1: pd.DataFrame, n_top_features: int = 9):
+def waterfall(sv1: pd.DataFrame, n_top_features: int = 9) -> go.Figure:
     """Waterfall plot for shap values.
 
     The id should be the index of the pandas dataframe

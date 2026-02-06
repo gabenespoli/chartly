@@ -1,7 +1,12 @@
 from datetime import date
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 from typing import Union
 
 import pandas as pd
+import plotly.graph_objects as go
 import polars as pl
 import streamlit as st
 from dateutil.relativedelta import relativedelta
@@ -29,21 +34,21 @@ class Chart:
     def __init__(
         self,
         id: str,
-        title: str = None,
-        data: pl.DataFrame = None,
-        y_opts: list = None,
-        x_opts: list = None,
-        color_opts: list = None,  # also for size, facet_col, facet_row
-        size_opts: list = None,
-        default_y: str = None,
-        default_x: str = None,
-        default_color: str = None,
-        colormaps: dict = None,
-        date_col: str = None,
-        date_grouping: str = None,
-        map_hover_cols: list = None,
-        map_hover_name: str = None,
-    ):
+        title: Optional[str] = None,
+        data: Optional[pl.DataFrame] = None,
+        y_opts: Optional[List[str]] = None,
+        x_opts: Optional[List[str]] = None,
+        color_opts: Optional[List[Optional[str]]] = None,  # also for size, facet_col, facet_row
+        size_opts: Optional[List[str]] = None,
+        default_y: Optional[str] = None,
+        default_x: Optional[str] = None,
+        default_color: Optional[str] = None,
+        colormaps: Optional[Dict[str, Any]] = None,
+        date_col: Optional[str] = None,
+        date_grouping: Optional[str] = None,
+        map_hover_cols: Optional[List[str]] = None,
+        map_hover_name: Optional[str] = None,
+    ) -> None:
         self.id = id
         self.title = title or id
         self.data = data
@@ -77,27 +82,27 @@ class Chart:
         self.fig = None
 
     @staticmethod
-    def header(title: str):
+    def header(title: str) -> List[Any]:
         cc = st.columns([8, 4, 4, 4, 3])
         cc[0].markdown(f"<h1>| {title}</h1>", unsafe_allow_html=True)
         return cc
 
     @staticmethod
-    def _popover_chart_options_style():
+    def _popover_chart_options_style() -> str:
         return '<div style="height: 28px;"></div>'
 
     @staticmethod
     def group_by_date(
         df: Union[pd.DataFrame, pl.DataFrame],
-        date_grouping: str,
+        date_grouping: Optional[str],
         date_col: str = "Datetime",
-        grp_col: str = None,
-    ) -> pd.DataFrame:
+        grp_col: Optional[str] = None,
+    ) -> Union[pd.DataFrame, pl.DataFrame]:
         if date_grouping is None:
             return df
         if isinstance(df, pd.DataFrame):
             df = df.set_index(date_col)
-            grp = [pd.Grouper(freq=DATE_GROUPING_MAP[date_grouping])]
+            grp: List[Any] = [pd.Grouper(freq=DATE_GROUPING_MAP[date_grouping])]
             if grp_col is not None:
                 grp = grp + [grp_col]
             df = df.groupby(grp)["Amount"].sum().reset_index()
@@ -110,14 +115,14 @@ class Chart:
             ).agg(col("Amount").sum())
         return df
 
-    def get_date_grouping(self, default: str = "Monthly"):
+    def get_date_grouping(self, default: str = "Monthly") -> None:
         self.date_grouping = st.selectbox(
             label="Date grouping",
             options=[None, *DATE_GROUPING_MAP.keys()],
             index=list(DATE_GROUPING_MAP.keys()).index(default) + 1,
         )
 
-    def get_options(self):
+    def get_options(self) -> None:
         cc = self.header(self.title)
         cc[4].write(self._popover_chart_options_style(), unsafe_allow_html=True)
         pp = cc[4].popover("Options")
@@ -207,11 +212,11 @@ class Chart:
 
     def update_figure(
         self,
-        orientation: str = None,
-        colormaps: dict = None,
-        map_theme: str = None,  # Light or Dark
-        **kwargs,
-    ):
+        orientation: Optional[str] = None,
+        colormaps: Optional[Dict[str, Any]] = None,
+        map_theme: Optional[str] = None,  # Light or Dark
+        **kwargs: Any,
+    ) -> None:
         self.data_chart = self.group_by_date(
             self.data,
             date_grouping=self.date_grouping,
@@ -304,7 +309,7 @@ class Chart:
                     selector=dict(type="histogram"),
                 )
 
-    def show_figure(self, use_container_width=True):
+    def show_figure(self, use_container_width: bool = True) -> None:
         if self.fig is not None:
             st.plotly_chart(
                 self.fig,
@@ -315,7 +320,7 @@ class Chart:
             st.error("Figure is not updated. Call Chart.update_figure() first.")
 
     @staticmethod
-    def data_expander(df: Union[pd.DataFrame, pl.DataFrame], title: str, **kwargs):
+    def data_expander(df: Union[pd.DataFrame, pl.DataFrame], title: str, **kwargs: Any) -> None:
         with st.expander(f"{title} ({df.shape[0]} records)", **kwargs):
             st.dataframe(df)
 
@@ -324,8 +329,8 @@ class Chart:
         raw_data: bool = True,
         chart_data: bool = False,
         map_data: bool = True,
-        **kwargs,  # passed to st.expander()
-    ):
+        **kwargs: Any,  # passed to st.expander()
+    ) -> None:
         """
         raw_data: If True, show the raw data.
         chart_data: If True, show the grouped/aggregated chart data.
@@ -352,7 +357,7 @@ class Chart:
         min_month_chart: date,
         font_color: str = "white",
         fillcolor: str = "#888888",
-    ):
+    ) -> None:
         """
         Alternate background color for each period in the chart.
 
