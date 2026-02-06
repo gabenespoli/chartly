@@ -61,7 +61,8 @@ def _add_category_orders(
             else:
                 try:
                     category_orders[col_name] = df[col_name].unique().sort()
-                except Exception:
+                except TypeError:
+                    print("Column contains unsortable types (e.g., mixed types); skip ordering")
                     pass
     kwargs["category_orders"] = category_orders
     return kwargs
