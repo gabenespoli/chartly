@@ -55,9 +55,9 @@ class Chart:
         self.y_opts = y_opts or data.columns
         self.x_opts = x_opts or data.columns
         self.color_opts = color_opts or data.columns
-        self.size_opts = size_opts or data.columns
-        if None not in self.color_opts:
+        if len(self.color_opts) > 0 and None not in self.color_opts:
             self.color_opts = [None] + self.color_opts
+        self.size_opts = size_opts or data.columns
 
         self.default_y = default_y or self.y_opts[0]
         self.default_x = default_x or self.x_opts[0]
