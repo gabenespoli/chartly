@@ -98,21 +98,25 @@ class Chart:
         date_grouping: Optional[str],
         date_col: str = "Datetime",
         grp_col: Optional[str] = None,
+        extra_grp_cols: Optional[List[str]] = None,
     ) -> Union[pd.DataFrame, pl.DataFrame]:
         if date_grouping is None:
             return df
+        extra_grp_cols = extra_grp_cols or []
         if isinstance(df, pd.DataFrame):
             df = df.set_index(date_col)
             grp: List[Any] = [pd.Grouper(freq=DATE_GROUPING_MAP[date_grouping])]
             if grp_col is not None:
                 grp = grp + [grp_col]
+            grp = grp + extra_grp_cols
             df = df.groupby(grp)["Amount"].sum().reset_index()
         elif isinstance(df, pl.DataFrame):
-            df = df.sort(grp_col, date_col)
+            all_grp_cols = [x for x in [grp_col] + extra_grp_cols if x is not None]
+            df = df.sort(*all_grp_cols, date_col)
             df = df.group_by_dynamic(
                 date_col,
                 every=DATE_GROUPING_MAP[date_grouping],
-                group_by=grp_col,
+                group_by=all_grp_cols if all_grp_cols else None,
             ).agg(col("Amount").sum())
         return df
 
@@ -232,6 +236,7 @@ class Chart:
             date_grouping=self.date_grouping,
             date_col=self.date_col,
             grp_col=self.color,
+            extra_grp_cols=[self.bar_group] if self.bar_group else None,
         )
         df = self.data_chart
         if self.graph_type == "map":
