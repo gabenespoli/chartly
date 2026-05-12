@@ -162,6 +162,7 @@ def graph(
                 kwargs.get("color"),
                 kwargs.get("facet_col"),
                 kwargs.get("facet_row"),
+                kwargs.get("bar_group"),
             ]
             if x is not None
         ]
@@ -185,6 +186,7 @@ def graph(
     if (
         sort_legend_by_value
         and color_col
+        and not kwargs.get("bar_group")
         and kwargs.get("facet_col") is None
         and kwargs.get("facet_row") is None
     ):
@@ -221,9 +223,73 @@ def graph(
     if graph_type in ["line", "scatter"]:
         df = df.sort(by=[group_col, x_col])
         fig = px.scatter(
-            df, **{k: v for k, v in kwargs.items() if k not in ["barmode", "text_auto"]}
+            df, **{k: v for k, v in kwargs.items() if k not in ["barmode", "text_auto", "bar_group"]}
+        )
+    elif kwargs.get("bar_group") and color_col:
+        # Grouped + Stacked: use go.Bar with offsetgroup for grouping and barmode=stack
+        bar_group_col = kwargs.pop("bar_group")
+        stack_col = color_col
+        height = kwargs.get("height", 550)
+        orientation = kwargs.get("orientation", "v")
+
+        if isinstance(df, pl.DataFrame):
+            df = df.to_pandas()
+
+        fig = go.Figure()
+
+        # Assign consistent colors per stack value
+        stack_values = sorted(df[stack_col].unique())
+        colors_palette = px.colors.qualitative.Plotly
+        color_map = colormaps.get(stack_col, {}) if stack_col else {}
+        if not color_map:
+            color_map = {
+                val: colors_palette[i % len(colors_palette)]
+                for i, val in enumerate(stack_values)
+            }
+
+        shown_in_legend = set()
+        for (grp_val, stack_val), group_df in df.groupby([bar_group_col, stack_col]):
+            name = str(stack_val)
+            show_legend = name not in shown_in_legend
+            shown_in_legend.add(name)
+
+            x_vals = list(group_df[x_col])
+            y_vals = list(group_df[y_col])
+
+            # Multi-category axis: [bar_group_values, x_values] creates sub-groups
+            if orientation == "h":
+                fig.add_trace(go.Bar(
+                    y=[x_vals, [str(grp_val)] * len(x_vals)],
+                    x=y_vals,
+                    name=name,
+                    legendgroup=name,
+                    showlegend=show_legend,
+                    marker_color=color_map.get(stack_val),
+                    text=x_vals,
+                    textposition="inside",
+                    orientation="h",
+                ))
+            else:
+                fig.add_trace(go.Bar(
+                    x=[x_vals, [str(grp_val)] * len(x_vals)],
+                    y=y_vals,
+                    name=name,
+                    legendgroup=name,
+                    showlegend=show_legend,
+                    marker_color=color_map.get(stack_val),
+                    text=y_vals,
+                    textposition="inside",
+                ))
+
+        fig.update_layout(
+            barmode="stack",
+            height=height,
+            bargap=0.15,
+            bargroupgap=0.1,
         )
     else:
+        # Remove bar_group from kwargs before passing to px.bar
+        kwargs.pop("bar_group", None)
         fig = px.bar(df, **kwargs)
     if graph_type == "line":
         fig.update_traces(dict(mode="lines+markers"))

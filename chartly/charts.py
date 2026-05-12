@@ -18,6 +18,7 @@ BARMODES = {
     "grouped": "group",
     "stacked": "stack",
     "overlaid": "relative",
+    "grouped+stacked": "stack",
 }
 
 DATE_GROUPING_MAP = {
@@ -97,21 +98,25 @@ class Chart:
         date_grouping: Optional[str],
         date_col: str = "Datetime",
         grp_col: Optional[str] = None,
+        extra_grp_cols: Optional[List[str]] = None,
     ) -> Union[pd.DataFrame, pl.DataFrame]:
         if date_grouping is None:
             return df
+        extra_grp_cols = extra_grp_cols or []
         if isinstance(df, pd.DataFrame):
             df = df.set_index(date_col)
             grp: List[Any] = [pd.Grouper(freq=DATE_GROUPING_MAP[date_grouping])]
             if grp_col is not None:
                 grp = grp + [grp_col]
+            grp = grp + extra_grp_cols
             df = df.groupby(grp)["Amount"].sum().reset_index()
         elif isinstance(df, pl.DataFrame):
-            df = df.sort(grp_col, date_col)
+            all_grp_cols = [x for x in [grp_col] + extra_grp_cols if x is not None]
+            df = df.sort(*all_grp_cols, date_col)
             df = df.group_by_dynamic(
                 date_col,
                 every=DATE_GROUPING_MAP[date_grouping],
-                group_by=grp_col,
+                group_by=all_grp_cols if all_grp_cols else None,
             ).agg(col("Amount").sum())
         return df
 
@@ -152,15 +157,18 @@ class Chart:
             key=f"{self.id}_color",
             disabled=self.graph_type == "donut",
         )
+        _is_grouped_stacked = st.session_state.get(f"{self.id}_barmode") == "grouped+stacked"
         self.facet_col = pp.selectbox(
             label="Column Split",
             options=[None] + self.color_opts,
             key=f"{self.id}_facet_col",
+            disabled=_is_grouped_stacked,
         )
         self.facet_row = pp.selectbox(
             label="Row Split",
             options=[None] + self.color_opts,
             key=f"{self.id}_facet_row",
+            disabled=_is_grouped_stacked,
         )
         self.size = pp.selectbox(
             label="Size",
@@ -175,6 +183,12 @@ class Chart:
             index=1,
             key=f"{self.id}_barmode",
             disabled=self.graph_type != "bar",
+        )
+        self.bar_group = pp.selectbox(
+            label="Bar Group",
+            options=[None] + self.color_opts,
+            key=f"{self.id}_bar_group",
+            disabled=self.barmode != "grouped+stacked" or self.graph_type != "bar",
         )
         self.marginal = pp.selectbox(
             label="Marginal Plots",
@@ -222,6 +236,7 @@ class Chart:
             date_grouping=self.date_grouping,
             date_col=self.date_col,
             grp_col=self.color,
+            extra_grp_cols=[self.bar_group] if self.bar_group else None,
         )
         df = self.data_chart
         if self.graph_type == "map":
@@ -298,6 +313,7 @@ class Chart:
                 height=self.height,
                 sort_legend_by_value=self.sort_legend_by_value,
                 colormaps=colormaps or self.colormaps,
+                bar_group=self.bar_group,
                 **marginal_args,
                 **kwargs,
             )
