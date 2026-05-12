@@ -223,7 +223,7 @@ def graph(
         fig = px.scatter(
             df, **{k: v for k, v in kwargs.items() if k not in ["barmode", "text_auto", "bar_group"]}
         )
-    elif kwargs.get("barmode") == "grouped_stacked" and kwargs.get("bar_group"):
+    elif kwargs.get("bar_group"):
         # Grouped + Stacked: use go.Bar with offsetgroup for grouping and barmode=stack
         bar_group_col = kwargs.pop("bar_group")
         stack_col = color_col  # Color dropdown serves as the stack column
