@@ -153,15 +153,18 @@ class Chart:
             key=f"{self.id}_color",
             disabled=self.graph_type == "donut",
         )
+        _is_grouped_stacked = st.session_state.get(f"{self.id}_barmode") == "grouped+stacked"
         self.facet_col = pp.selectbox(
             label="Column Split",
             options=[None] + self.color_opts,
             key=f"{self.id}_facet_col",
+            disabled=_is_grouped_stacked,
         )
         self.facet_row = pp.selectbox(
             label="Row Split",
             options=[None] + self.color_opts,
             key=f"{self.id}_facet_row",
+            disabled=_is_grouped_stacked,
         )
         self.size = pp.selectbox(
             label="Size",

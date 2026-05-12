@@ -147,7 +147,7 @@ def graph(
 
     kwargs = _add_category_orders(
         df,
-        plot_vars=["x", "y", "color", "facet_col", "facet_row"],
+        plot_vars=["x", "y", "color", "facet_col", "facet_row", "bar_group"],
         kwargs=kwargs,
         colormaps=colormaps,
     )
@@ -186,6 +186,7 @@ def graph(
     if (
         sort_legend_by_value
         and color_col
+        and not kwargs.get("bar_group")
         and kwargs.get("facet_col") is None
         and kwargs.get("facet_row") is None
     ):
@@ -224,7 +225,7 @@ def graph(
         fig = px.scatter(
             df, **{k: v for k, v in kwargs.items() if k not in ["barmode", "text_auto", "bar_group"]}
         )
-    elif kwargs.get("bar_group"):
+    elif kwargs.get("bar_group") and color_col:
         # Grouped + Stacked: use go.Bar with offsetgroup for grouping and barmode=stack
         bar_group_col = kwargs.pop("bar_group")
         stack_col = color_col  # Color dropdown serves as the stack column
@@ -268,6 +269,8 @@ def graph(
                 legendgroup=name,
                 showlegend=show_legend,
                 marker_color=color_map.get(stack_val) if stack_val else None,
+                text=group_df[y_col] if orientation != "h" else group_df[x_col],
+                textposition="inside",
             )
 
             if orientation == "h":
