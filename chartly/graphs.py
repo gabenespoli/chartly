@@ -156,23 +156,13 @@ def graph(
         kwargs["height"] = _get_height(df, kwargs)
 
     if pre_agg_for_text_auto:
-        bar_group_col_name = kwargs.get("bar_group")
-        # Only include bar_group if column exists in the dataframe
-        if bar_group_col_name is not None:
-            if isinstance(df, pl.DataFrame):
-                bar_group_valid = bar_group_col_name in df.columns
-            else:
-                bar_group_valid = bar_group_col_name in df.columns
-            if not bar_group_valid:
-                bar_group_col_name = None
-
         groupby = [
             x
             for x in [
                 kwargs.get("color"),
                 kwargs.get("facet_col"),
                 kwargs.get("facet_row"),
-                bar_group_col_name,
+                kwargs.get("bar_group"),
             ]
             if x is not None
         ]
@@ -235,7 +225,7 @@ def graph(
         fig = px.scatter(
             df, **{k: v for k, v in kwargs.items() if k not in ["barmode", "text_auto", "bar_group"]}
         )
-    elif kwargs.get("bar_group") and color_col and kwargs.get("bar_group") in (df.columns if isinstance(df, pl.DataFrame) else df.columns):
+    elif kwargs.get("bar_group") and color_col:
         # Grouped + Stacked: use go.Bar with offsetgroup for grouping and barmode=stack
         bar_group_col = kwargs.pop("bar_group")
         stack_col = color_col  # Color dropdown serves as the stack column
