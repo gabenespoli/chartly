@@ -220,6 +220,8 @@ def graph(
             color_discrete_map[v] = kwargs.get("color_discrete_map").get(k)
         kwargs["color_discrete_map"] = color_discrete_map
 
+    import streamlit as st
+    st.write("DEBUG pre-branch:", "bar_group=", kwargs.get("bar_group"), "color_col=", color_col, "graph_type=", graph_type)
     if graph_type in ["line", "scatter"]:
         df = df.sort(by=[group_col, x_col])
         fig = px.scatter(
