@@ -221,9 +221,73 @@ def graph(
     if graph_type in ["line", "scatter"]:
         df = df.sort(by=[group_col, x_col])
         fig = px.scatter(
-            df, **{k: v for k, v in kwargs.items() if k not in ["barmode", "text_auto"]}
+            df, **{k: v for k, v in kwargs.items() if k not in ["barmode", "text_auto", "bar_group"]}
+        )
+    elif kwargs.get("barmode") == "grouped_stacked" and kwargs.get("bar_group"):
+        # Grouped + Stacked: use go.Bar with offsetgroup for grouping and barmode=stack
+        bar_group_col = kwargs.pop("bar_group")
+        stack_col = color_col  # Color dropdown serves as the stack column
+        height = kwargs.get("height", 550)
+        orientation = kwargs.get("orientation", "v")
+
+        if isinstance(df, pl.DataFrame):
+            df = df.to_pandas()
+
+        fig = go.Figure()
+
+        # Assign consistent colors per stack value
+        stack_values = df[stack_col].unique() if stack_col else [None]
+        colors = px.colors.qualitative.Plotly
+        color_map = colormaps.get(stack_col, {}) if stack_col else {}
+        if not color_map:
+            color_map = {
+                val: colors[i % len(colors)] for i, val in enumerate(stack_values)
+            }
+
+        if stack_col:
+            groupby_cols = [bar_group_col, stack_col]
+        else:
+            groupby_cols = [bar_group_col]
+
+        shown_in_legend = set()
+        for keys, group_df in df.groupby(groupby_cols):
+            if stack_col:
+                grp_val, stack_val = keys
+            else:
+                grp_val = keys if isinstance(keys, str) else keys[0]
+                stack_val = None
+
+            name = f"{stack_val}" if stack_val else f"{grp_val}"
+            show_legend = name not in shown_in_legend
+            shown_in_legend.add(name)
+
+            bar_kwargs = dict(
+                name=name,
+                offsetgroup=str(grp_val),
+                legendgroup=name,
+                showlegend=show_legend,
+                marker_color=color_map.get(stack_val) if stack_val else None,
+            )
+
+            if orientation == "h":
+                bar_kwargs["y"] = group_df[x_col]
+                bar_kwargs["x"] = group_df[y_col]
+                bar_kwargs["orientation"] = "h"
+            else:
+                bar_kwargs["x"] = group_df[x_col]
+                bar_kwargs["y"] = group_df[y_col]
+
+            fig.add_trace(go.Bar(**bar_kwargs))
+
+        fig.update_layout(
+            barmode="stack",
+            height=height,
+            bargap=0.15,
+            bargroupgap=0.1,
         )
     else:
+        # Remove bar_group from kwargs before passing to px.bar
+        kwargs.pop("bar_group", None)
         fig = px.bar(df, **kwargs)
     if graph_type == "line":
         fig.update_traces(dict(mode="lines+markers"))

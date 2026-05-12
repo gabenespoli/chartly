@@ -18,6 +18,7 @@ BARMODES = {
     "grouped": "group",
     "stacked": "stack",
     "overlaid": "relative",
+    "grouped+stacked": "grouped_stacked",
 }
 
 DATE_GROUPING_MAP = {
@@ -176,6 +177,12 @@ class Chart:
             key=f"{self.id}_barmode",
             disabled=self.graph_type != "bar",
         )
+        self.bar_group = pp.selectbox(
+            label="Bar Group",
+            options=[None] + self.color_opts,
+            key=f"{self.id}_bar_group",
+            disabled=self.barmode != "grouped + stacked" or self.graph_type != "bar",
+        )
         self.marginal = pp.selectbox(
             label="Marginal Plots",
             options=[None, "box", "histogram", "rug", "violin"],
@@ -298,6 +305,7 @@ class Chart:
                 height=self.height,
                 sort_legend_by_value=self.sort_legend_by_value,
                 colormaps=colormaps or self.colormaps,
+                bar_group=self.bar_group,
                 **marginal_args,
                 **kwargs,
             )
