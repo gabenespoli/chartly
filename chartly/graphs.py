@@ -226,7 +226,8 @@ def graph(
             df, **{k: v for k, v in kwargs.items() if k not in ["barmode", "text_auto", "bar_group"]}
         )
     elif kwargs.get("bar_group") and color_col:
-        # Grouped + Stacked: use go.Bar with offsetgroup for grouping and barmode=stack
+        # Grouped + Stacked: use go.Bar with multi-category axes for grouping
+        # and barmode=stack for stacking within each group
         bar_group_col = kwargs.pop("bar_group")
         stack_col = color_col
         height = kwargs.get("height", 550)
@@ -240,7 +241,7 @@ def graph(
         # Assign consistent colors per stack value
         stack_values = sorted(df[stack_col].unique())
         colors_palette = px.colors.qualitative.Plotly
-        color_map = colormaps.get(stack_col, {}) if stack_col else {}
+        color_map = colormaps.get(stack_col, {})
         if not color_map:
             color_map = {
                 val: colors_palette[i % len(colors_palette)]
@@ -255,23 +256,23 @@ def graph(
 
             x_vals = list(group_df[x_col])
             y_vals = list(group_df[y_col])
+            grp_labels = [str(grp_val)] * len(x_vals)
 
-            # Multi-category axis: [bar_group_values, x_values] creates sub-groups
             if orientation == "h":
                 fig.add_trace(go.Bar(
-                    y=[x_vals, [str(grp_val)] * len(x_vals)],
+                    y=[x_vals, grp_labels],
                     x=y_vals,
                     name=name,
                     legendgroup=name,
                     showlegend=show_legend,
                     marker_color=color_map.get(stack_val),
-                    text=x_vals,
+                    text=y_vals,
                     textposition="inside",
                     orientation="h",
                 ))
             else:
                 fig.add_trace(go.Bar(
-                    x=[x_vals, [str(grp_val)] * len(x_vals)],
+                    x=[x_vals, grp_labels],
                     y=y_vals,
                     name=name,
                     legendgroup=name,

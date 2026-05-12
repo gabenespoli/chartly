@@ -186,7 +186,7 @@ class Chart:
         )
         self.bar_group = pp.selectbox(
             label="Bar Group",
-            options=[None] + self.color_opts,
+            options=self.color_opts,
             key=f"{self.id}_bar_group",
             disabled=self.barmode != "grouped+stacked" or self.graph_type != "bar",
         )
