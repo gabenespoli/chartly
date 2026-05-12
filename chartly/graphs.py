@@ -220,8 +220,6 @@ def graph(
             color_discrete_map[v] = kwargs.get("color_discrete_map").get(k)
         kwargs["color_discrete_map"] = color_discrete_map
 
-    import streamlit as st
-    st.write("DEBUG pre-branch:", "bar_group=", kwargs.get("bar_group"), "color_col=", color_col, "graph_type=", graph_type)
     if graph_type in ["line", "scatter"]:
         df = df.sort(by=[group_col, x_col])
         fig = px.scatter(
@@ -229,10 +227,8 @@ def graph(
         )
     elif kwargs.get("bar_group") and color_col:
         # Grouped + Stacked: use go.Bar with offsetgroup for grouping and barmode=stack
-        import streamlit as st
-        st.info(f"DEBUG: Entering grouped+stacked branch. bar_group={kwargs.get('bar_group')}, color_col={color_col}")
         bar_group_col = kwargs.pop("bar_group")
-        stack_col = color_col  # Color dropdown serves as the stack column
+        stack_col = color_col
         height = kwargs.get("height", 550)
         orientation = kwargs.get("orientation", "v")
 
@@ -242,54 +238,48 @@ def graph(
         fig = go.Figure()
 
         # Assign consistent colors per stack value
-        stack_values = df[stack_col].unique() if stack_col else [None]
-        colors = px.colors.qualitative.Plotly
+        stack_values = sorted(df[stack_col].unique())
+        colors_palette = px.colors.qualitative.Plotly
         color_map = colormaps.get(stack_col, {}) if stack_col else {}
         if not color_map:
             color_map = {
-                val: colors[i % len(colors)] for i, val in enumerate(stack_values)
+                val: colors_palette[i % len(colors_palette)]
+                for i, val in enumerate(stack_values)
             }
 
-        if stack_col:
-            groupby_cols = [bar_group_col, stack_col]
-        else:
-            groupby_cols = [bar_group_col]
-
         shown_in_legend = set()
-        for keys, group_df in df.groupby(groupby_cols):
-            if stack_col:
-                grp_val, stack_val = keys
-            else:
-                grp_val = keys if isinstance(keys, str) else keys[0]
-                stack_val = None
-
-            name = f"{stack_val}" if stack_val else f"{grp_val}"
+        for (grp_val, stack_val), group_df in df.groupby([bar_group_col, stack_col]):
+            name = str(stack_val)
             show_legend = name not in shown_in_legend
             shown_in_legend.add(name)
 
-            bar_kwargs = dict(
-                name=name,
-                offsetgroup=str(grp_val),
-                legendgroup=name,
-                showlegend=show_legend,
-                marker_color=color_map.get(stack_val) if stack_val else None,
-                text=group_df[y_col] if orientation != "h" else group_df[x_col],
-                textposition="inside",
-            )
+            x_vals = list(group_df[x_col])
+            y_vals = list(group_df[y_col])
 
+            # Multi-category axis: [bar_group_values, x_values] creates sub-groups
             if orientation == "h":
-                bar_kwargs["y"] = group_df[x_col]
-                bar_kwargs["x"] = group_df[y_col]
-                bar_kwargs["orientation"] = "h"
+                fig.add_trace(go.Bar(
+                    y=[x_vals, [str(grp_val)] * len(x_vals)],
+                    x=y_vals,
+                    name=name,
+                    legendgroup=name,
+                    showlegend=show_legend,
+                    marker_color=color_map.get(stack_val),
+                    text=x_vals,
+                    textposition="inside",
+                    orientation="h",
+                ))
             else:
-                bar_kwargs["x"] = group_df[x_col]
-                bar_kwargs["y"] = group_df[y_col]
-
-            fig.add_trace(go.Bar(**bar_kwargs))
-
-        st.write("DEBUG traces:", [(t.name, t.offsetgroup) for t in fig.data])
-        st.write("DEBUG layout.barmode:", fig.layout.barmode)
-        st.write("DEBUG x_col:", x_col, "y_col:", y_col, "bar_group_col:", bar_group_col, "stack_col:", stack_col)
+                fig.add_trace(go.Bar(
+                    x=[x_vals, [str(grp_val)] * len(x_vals)],
+                    y=y_vals,
+                    name=name,
+                    legendgroup=name,
+                    showlegend=show_legend,
+                    marker_color=color_map.get(stack_val),
+                    text=y_vals,
+                    textposition="inside",
+                ))
 
         fig.update_layout(
             barmode="stack",
