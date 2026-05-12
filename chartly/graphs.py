@@ -286,6 +286,8 @@ def graph(
             fig.add_trace(go.Bar(**bar_kwargs))
 
         st.write("DEBUG traces:", [(t.name, t.offsetgroup) for t in fig.data])
+        st.write("DEBUG layout.barmode:", fig.layout.barmode)
+        st.write("DEBUG x_col:", x_col, "y_col:", y_col, "bar_group_col:", bar_group_col, "stack_col:", stack_col)
 
         fig.update_layout(
             barmode="stack",
