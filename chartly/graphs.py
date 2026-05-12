@@ -227,6 +227,8 @@ def graph(
         )
     elif kwargs.get("bar_group") and color_col:
         # Grouped + Stacked: use go.Bar with offsetgroup for grouping and barmode=stack
+        import streamlit as st
+        st.info(f"DEBUG: Entering grouped+stacked branch. bar_group={kwargs.get('bar_group')}, color_col={color_col}")
         bar_group_col = kwargs.pop("bar_group")
         stack_col = color_col  # Color dropdown serves as the stack column
         height = kwargs.get("height", 550)
