@@ -147,7 +147,7 @@ def graph(
 
     kwargs = _add_category_orders(
         df,
-        plot_vars=["x", "y", "color", "facet_col", "facet_row", "bar_group"],
+        plot_vars=["x", "y", "color", "facet_col", "facet_row"],
         kwargs=kwargs,
         colormaps=colormaps,
     )
