@@ -162,6 +162,7 @@ def graph(
                 kwargs.get("color"),
                 kwargs.get("facet_col"),
                 kwargs.get("facet_row"),
+                kwargs.get("bar_group"),
             ]
             if x is not None
         ]
