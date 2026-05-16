@@ -235,6 +235,8 @@ def graph(
         if isinstance(df, pl.DataFrame):
             df = df.to_pandas()
 
+        df = df.sort_values(by=x_col)
+
         fig = go.Figure()
 
         # Assign consistent colors per stack value
