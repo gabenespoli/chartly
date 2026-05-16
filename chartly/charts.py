@@ -70,6 +70,20 @@ class Chart:
             self.color_opts = [None] + self.color_opts
         self.size_opts = size_opts or data.columns
 
+        self.graph_types = ["bar", "line", "scatter", "donut", "sunburst"]
+        if "lat" in data.columns and "lon" in data.columns:
+            self.graph_types.append("map")
+
+        self.colormaps = colormaps
+        self.date_col = date_col
+        self.date_grouping = date_grouping
+        self.data_chart = self.data
+
+        self.map_hover_cols = map_hover_cols
+        self.map_hover_name = map_hover_name
+        self.data_nomap = None
+        self.data_nosize = None
+
         self.default_y = default_y or self.y_opts[0]
         self.default_x = default_x or self.x_opts[0]
         self.default_color = default_color
@@ -83,20 +97,6 @@ class Chart:
         self.default_date_grouping = default_date_grouping or "Monthly"
         self.default_height = default_height
         self.default_histogram_bins = default_histogram_bins
-
-        self.colormaps = colormaps
-        self.date_col = date_col
-        self.date_grouping = date_grouping
-        self.data_chart = self.data
-
-        self.map_hover_cols = map_hover_cols
-        self.map_hover_name = map_hover_name
-        self.data_nomap = None
-        self.data_nosize = None
-
-        self.graph_types = ["bar", "line", "scatter", "donut", "sunburst"]
-        if "lat" in data.columns and "lon" in data.columns:
-            self.graph_types.append("map")
 
         self.get_options()
 
