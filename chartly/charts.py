@@ -54,6 +54,8 @@ class Chart:
         default_date_grouping: Optional[str] = "Monthly",
         default_height: int = 600,
         default_histogram_bins: int = 50,
+        default_orientation_h: bool = False,
+        default_sort_legend_by_value: bool = False,
         colormaps: Optional[Dict[str, Any]] = None,
         date_col: Optional[str] = None,
         date_grouping: Optional[str] = None,
@@ -97,6 +99,8 @@ class Chart:
         self.default_date_grouping = default_date_grouping or "Monthly"
         self.default_height = default_height
         self.default_histogram_bins = default_histogram_bins
+        self.default_orientation_h = default_orientation_h
+        self.default_sort_legend_by_value = default_sort_legend_by_value
 
         self.get_options()
 
@@ -256,12 +260,14 @@ class Chart:
 
         self.orientation_h = pp.checkbox(
             label="Horizontal bars",
+            value=self.default_orientation_h,
             key=f"{self.id}_orientation",
             disabled=self.graph_type != "bar" or self.x in ["Date", "Month"],
         )
         self.orientation = "h" if self.orientation_h else "v"
         self.sort_legend_by_value = pp.checkbox(
             label="Sort legend by value",
+            value=self.default_sort_legend_by_value,
             disabled=True if self.facet_col or self.facet_row else False,
             key=f"{self.id}_sort_legend_by_value",
         )
