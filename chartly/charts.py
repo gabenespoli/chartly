@@ -132,6 +132,7 @@ class Chart:
             df = df.groupby(grp)["Amount"].sum().reset_index()
         elif isinstance(df, pl.DataFrame):
             all_grp_cols = [x for x in [grp_col] + extra_grp_cols if x is not None]
+            all_grp_cols = list(dict.fromkeys(all_grp_cols))
             df = df.sort(*all_grp_cols, date_col)
             df = df.group_by_dynamic(
                 date_col,
