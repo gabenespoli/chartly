@@ -44,6 +44,16 @@ class Chart:
         default_y: Optional[str] = None,
         default_x: Optional[str] = None,
         default_color: Optional[str] = None,
+        default_graph_type: Optional[str] = None,
+        default_facet_col: Optional[str] = None,
+        default_facet_row: Optional[str] = None,
+        default_size: Optional[str] = None,
+        default_barmode: str = "stacked",
+        default_bar_group: Optional[str] = None,
+        default_marginal: Optional[str] = None,
+        default_date_grouping: Optional[str] = "Monthly",
+        default_height: int = 600,
+        default_histogram_bins: int = 50,
         colormaps: Optional[Dict[str, Any]] = None,
         date_col: Optional[str] = None,
         date_grouping: Optional[str] = None,
@@ -63,6 +73,16 @@ class Chart:
         self.default_y = default_y or self.y_opts[0]
         self.default_x = default_x or self.x_opts[0]
         self.default_color = default_color
+        self.default_graph_type = default_graph_type or self.graph_types[0]
+        self.default_facet_col = default_facet_col
+        self.default_facet_row = default_facet_row
+        self.default_size = default_size
+        self.default_barmode = default_barmode
+        self.default_bar_group = default_bar_group
+        self.default_marginal = default_marginal
+        self.default_date_grouping = default_date_grouping or "Monthly"
+        self.default_height = default_height
+        self.default_histogram_bins = default_histogram_bins
 
         self.colormaps = colormaps
         self.date_col = date_col
@@ -120,11 +140,16 @@ class Chart:
             ).agg(col("Amount").sum())
         return df
 
-    def get_date_grouping(self, default: str = "Monthly") -> None:
+    def get_date_grouping(self, default: Optional[str] = None) -> None:
+        default = default or self.default_date_grouping
+        if default in DATE_GROUPING_MAP:
+            index = list(DATE_GROUPING_MAP.keys()).index(default) + 1
+        else:
+            index = 0
         self.date_grouping = st.selectbox(
             label="Date grouping",
             options=[None, *DATE_GROUPING_MAP.keys()],
-            index=list(DATE_GROUPING_MAP.keys()).index(default) + 1,
+            index=index,
         )
 
     def get_options(self) -> None:
@@ -135,6 +160,7 @@ class Chart:
         self.graph_type = pp.selectbox(
             label="Graph Type",
             options=self.graph_types,
+            index=self.graph_types.index(self.default_graph_type),
             key=f"{self.id}_graph_type",
         )
 
@@ -158,54 +184,69 @@ class Chart:
             disabled=self.graph_type == "donut",
         )
         _is_grouped_stacked = st.session_state.get(f"{self.id}_barmode") == "grouped+stacked"
+        facet_opts = [None] + self.color_opts
+        self.facet_col_index = 0 if self.default_facet_col is None else facet_opts.index(self.default_facet_col)
         self.facet_col = pp.selectbox(
             label="Column Split",
-            options=[None] + self.color_opts,
+            options=facet_opts,
+            index=self.facet_col_index,
             key=f"{self.id}_facet_col",
             disabled=_is_grouped_stacked,
         )
+        facet_row_opts = [None] + self.color_opts
+        self.facet_row_index = 0 if self.default_facet_row is None else facet_row_opts.index(self.default_facet_row)
         self.facet_row = pp.selectbox(
             label="Row Split",
-            options=[None] + self.color_opts,
+            options=facet_row_opts,
+            index=self.facet_row_index,
             key=f"{self.id}_facet_row",
             disabled=_is_grouped_stacked,
         )
+        size_opts = [None] + self.size_opts
+        self.size_index = 0 if self.default_size is None else size_opts.index(self.default_size)
         self.size = pp.selectbox(
             label="Size",
-            options=[None] + self.size_opts,
+            options=size_opts,
+            index=self.size_index,
             key=f"{self.id}_size",
             disabled=self.graph_type not in ["scatter", "map"],
         )
 
         self.barmode = pp.selectbox(
             label="Bar Mode",
-            options=BARMODES.keys(),
-            index=1,
+            options=list(BARMODES.keys()),
+            index=list(BARMODES.keys()).index(self.default_barmode),
             key=f"{self.id}_barmode",
             disabled=self.graph_type != "bar",
         )
+        bar_group_opts = [None] + self.color_opts
+        self.bar_group_index = 0 if self.default_bar_group is None else bar_group_opts.index(self.default_bar_group)
         self.bar_group = pp.selectbox(
             label="Bar Group",
-            options=[None] + self.color_opts,
+            options=bar_group_opts,
+            index=self.bar_group_index,
             key=f"{self.id}_bar_group",
             disabled=self.barmode != "grouped+stacked" or self.graph_type != "bar",
         )
+        marginal_opts = [None, "box", "histogram", "rug", "violin"]
+        self.marginal_index = 0 if self.default_marginal is None else marginal_opts.index(self.default_marginal)
         self.marginal = pp.selectbox(
             label="Marginal Plots",
-            options=[None, "box", "histogram", "rug", "violin"],
+            options=marginal_opts,
+            index=self.marginal_index,
             key=f"{self.id}_marginal",
             disabled=self.graph_type != "scatter",
         )
         self.histogram_bins = pp.number_input(
             label="Marginal Histogram Bins",
-            value=50,
+            value=self.default_histogram_bins,
             step=5,
             key=f"{self.id}_histogram_bins",
         )
 
         self.height = pp.number_input(
             label="Height",
-            value=600,
+            value=self.default_height,
             min_value=100,
             max_value=2000,
             step=25,
