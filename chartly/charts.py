@@ -134,6 +134,14 @@ class Chart:
                 grp = grp + [grp_col]
             grp = grp + extra_grp_cols
             df = df.groupby(grp)["Amount"].sum().reset_index()
+            if date_col in df.columns:
+                df["DateGrouping"] = df[date_col].dt.strftime(
+                    "%Y-%m" if date_grouping == "Monthly" else
+                    "%Y-Q%q" if date_grouping == "Quarterly" else
+                    "%Y" if date_grouping == "Yearly" else
+                    "%Y-W%V" if date_grouping == "Weekly" else
+                    "%Y-W%V"
+                )
         elif isinstance(df, pl.DataFrame):
             all_grp_cols = [x for x in [grp_col] + extra_grp_cols if x is not None]
             all_grp_cols = list(dict.fromkeys(all_grp_cols))
@@ -143,6 +151,23 @@ class Chart:
                 every=DATE_GROUPING_MAP[date_grouping],
                 group_by=all_grp_cols if all_grp_cols else None,
             ).agg(col("Amount").sum())
+            if date_grouping == "Bi-Weekly":
+                week_num = pl.col(date_col).dt.week()
+                year = pl.col(date_col).dt.year().cast(pl.Utf8)
+                bi_week = ((week_num - 1) // 2 * 2 + 1).cast(pl.Utf8).str.zfill(2)
+                df = df.with_columns((year + "-W" + bi_week).alias("DateGrouping"))
+            elif date_grouping == "Monthly":
+                df = df.with_columns(pl.col(date_col).dt.strftime("%Y-%m").alias("DateGrouping"))
+            elif date_grouping == "Quarterly":
+                quarter = ((pl.col(date_col).dt.month() - 1) // 3 + 1).cast(pl.Utf8)
+                year = pl.col(date_col).dt.year().cast(pl.Utf8)
+                df = df.with_columns((year + "-Q" + quarter).alias("DateGrouping"))
+            elif date_grouping == "Yearly":
+                df = df.with_columns(pl.col(date_col).dt.year().cast(pl.Utf8).alias("DateGrouping"))
+            elif date_grouping == "Weekly":
+                df = df.with_columns(pl.col(date_col).dt.strftime("%Y-W%V").alias("DateGrouping"))
+            else:
+                df = df.with_columns(pl.col(date_col).dt.strftime("%Y-%m-%d").alias("DateGrouping"))
         return df
 
     def get_date_grouping(self, default: Optional[str] = None) -> None:
@@ -156,6 +181,49 @@ class Chart:
             options=[None, *DATE_GROUPING_MAP.keys()],
             index=index,
         )
+        self.add_date_grouping_column()
+
+    def add_date_grouping_column(self) -> None:
+        if self.data is None or self.date_col is None:
+            return
+
+        if self.date_grouping is None:
+            fmt = "%Y-%m-%d"
+        elif self.date_grouping == "Daily":
+            fmt = "%Y-%m-%d"
+        elif self.date_grouping == "Weekly":
+            fmt = "%Y-W%V"
+        elif self.date_grouping == "Bi-Weekly":
+            fmt = "%Y-W%V-B1"
+        elif self.date_grouping == "Monthly":
+            fmt = "%Y-%m"
+        elif self.date_grouping == "Quarterly":
+            fmt = "%Y-Q%q"
+        elif self.date_grouping == "Yearly":
+            fmt = "%Y"
+        else:
+            return
+
+        if isinstance(self.data, pl.DataFrame):
+            if self.date_grouping == "Bi-Weekly":
+                week_num = pl.col(self.date_col).dt.week()
+                year = pl.col(self.date_col).dt.year().cast(pl.Utf8)
+                bi_week = ((week_num - 1) // 2 * 2 + 1).cast(pl.Utf8).str.zfill(2)
+                self.data = self.data.with_columns(
+                    (year + "-W" + bi_week).alias("DateGrouping")
+                )
+            elif self.date_grouping == "Quarterly":
+                quarter = ((pl.col(self.date_col).dt.month() - 1) // 3 + 1).cast(pl.Utf8)
+                year = pl.col(self.date_col).dt.year().cast(pl.Utf8)
+                self.data = self.data.with_columns(
+                    (year + "-Q" + quarter).alias("DateGrouping")
+                )
+            else:
+                self.data = self.data.with_columns(
+                    pl.col(self.date_col).dt.strftime(fmt).alias("DateGrouping")
+                )
+        elif isinstance(self.data, pd.DataFrame):
+            self.data["DateGrouping"] = self.data[self.date_col].dt.strftime(fmt)
 
     def get_options(self) -> None:
         cc = self.header(self.title)
@@ -277,9 +345,13 @@ class Chart:
         orientation: Optional[str] = None,
         colormaps: Optional[Dict[str, Any]] = None,
         map_theme: Optional[str] = None,  # Light or Dark
+        pre_filtered_data: Optional[pl.DataFrame] = None,
         **kwargs: Any,
     ) -> None:
-        self.data_chart = self.group_by_date(
+        if pre_filtered_data is not None:
+            self.data_chart = pre_filtered_data
+        else:
+            self.data_chart = self.group_by_date(
             self.data,
             date_grouping=self.date_grouping,
             date_col=self.date_col,
