@@ -179,6 +179,7 @@ class Chart:
         default_min: Optional[str] = None,
         default_max: Optional[str] = None,
         default_max_complete_period: Optional[date] = None,
+        default_min_num_periods: Optional[int] = None,
     ) -> None:
         default = default or self.default_date_grouping
         if default in DATE_GROUPING_MAP:
@@ -193,6 +194,16 @@ class Chart:
         self.add_date_grouping_column()
         if default_max is None and default_max_complete_period is not None:
             default_max = self.get_last_complete_period(default_max_complete_period)
+        if default_min is None and default_min_num_periods is not None:
+            ref = default_max
+            if ref is None:
+                # Use latest available value from data
+                if isinstance(self.data, pl.DataFrame) and "DateGrouping" in self.data.columns:
+                    ref = sorted(self.data["DateGrouping"].unique().to_list())[-1]
+                elif isinstance(self.data, pd.DataFrame) and "DateGrouping" in self.data.columns:
+                    ref = sorted(self.data["DateGrouping"].unique().tolist())[-1]
+            if ref is not None:
+                default_min = self.get_period_offset(ref, default_min_num_periods)
         self.get_date_range_filter(default_min=default_min, default_max=default_max)
 
     def add_date_grouping_column(self) -> None:
@@ -297,6 +308,65 @@ class Chart:
 
         elif self.date_grouping == "Yearly":
             return str(dt.year - 1)
+
+        return None
+
+    def get_period_offset(self, period_str: str, num_periods: int) -> Optional[str]:
+        """Return the DateGrouping string that is `num_periods` before `period_str`.
+
+        Args:
+            period_str: A DateGrouping string (e.g., "2026-W15", "2026-04").
+            num_periods: Number of periods to step back.
+
+        Returns:
+            The DateGrouping string offset by num_periods, or None if date_grouping
+            is not set.
+        """
+        if self.date_grouping is None:
+            return None
+
+        if self.date_grouping == "Daily":
+            dt = date.fromisoformat(period_str)
+            result = dt - timedelta(days=num_periods)
+            return result.strftime("%Y-%m-%d")
+
+        elif self.date_grouping == "Weekly":
+            # Parse "YYYY-WVV"
+            year, week = int(period_str[:4]), int(period_str.split("W")[1])
+            # Get the Monday of that week, then subtract num_periods weeks
+            jan4 = date(year, 1, 4)  # Jan 4 is always in ISO week 1
+            monday_w1 = jan4 - timedelta(days=jan4.weekday())
+            target_monday = monday_w1 + timedelta(weeks=week - 1) - timedelta(weeks=num_periods)
+            return target_monday.strftime("%Y-W%V")
+
+        elif self.date_grouping == "Bi-Weekly":
+            # Parse "YYYY-WVV" (bi-weekly bucket start)
+            year, week = int(period_str[:4]), int(period_str.split("W")[1])
+            jan4 = date(year, 1, 4)
+            monday_w1 = jan4 - timedelta(days=jan4.weekday())
+            target_monday = monday_w1 + timedelta(weeks=week - 1) - timedelta(weeks=num_periods * 2)
+            # Recompute bi-weekly bucket for the target date
+            iso_year, iso_week, _ = target_monday.isocalendar()
+            b = ((iso_week - 1) // 2 * 2 + 1)
+            return f"{iso_year}-W{b:02d}"
+
+        elif self.date_grouping == "Monthly":
+            # Parse "YYYY-MM"
+            year, month = int(period_str[:4]), int(period_str[5:7])
+            result = date(year, month, 1) - relativedelta(months=num_periods)
+            return result.strftime("%Y-%m")
+
+        elif self.date_grouping == "Quarterly":
+            # Parse "YYYY-QN"
+            year, quarter = int(period_str[:4]), int(period_str[-1])
+            total_quarters = year * 4 + quarter - num_periods
+            result_year = (total_quarters - 1) // 4
+            result_quarter = total_quarters - result_year * 4
+            return f"{result_year}-Q{result_quarter}"
+
+        elif self.date_grouping == "Yearly":
+            year = int(period_str)
+            return str(year - num_periods)
 
         return None
 
