@@ -79,6 +79,8 @@ class Chart:
         self.colormaps = colormaps
         self.date_col = date_col
         self.date_grouping = date_grouping
+        self.min_date_grouping: Optional[str] = None
+        self.max_date_grouping: Optional[str] = None
         self.data_chart = self.data
 
         self.map_hover_cols = map_hover_cols
@@ -225,6 +227,36 @@ class Chart:
         elif isinstance(self.data, pd.DataFrame):
             self.data["DateGrouping"] = self.data[self.date_col].dt.strftime(fmt)
 
+    def get_date_range_filter(self) -> None:
+        """Render Min/Max Date selectboxes based on available DateGrouping values.
+        The selected range is used to automatically filter data in update_figure().
+        """
+        if self.data is None or self.date_grouping is None:
+            return
+        if "DateGrouping" not in self.data.columns:
+            self.add_date_grouping_column()
+        if isinstance(self.data, pl.DataFrame):
+            options = sorted(self.data["DateGrouping"].unique().to_list())
+        elif isinstance(self.data, pd.DataFrame):
+            options = sorted(self.data["DateGrouping"].unique().tolist())
+        else:
+            return
+        if not options:
+            return
+        cols = st.columns(2)
+        self.min_date_grouping = cols[0].selectbox(
+            label="Min Date",
+            options=options,
+            index=0,
+            key=f"{self.id}_min_date_grouping",
+        )
+        self.max_date_grouping = cols[1].selectbox(
+            label="Max Date",
+            options=options,
+            index=len(options) - 1,
+            key=f"{self.id}_max_date_grouping",
+        )
+
     def get_options(self) -> None:
         cc = self.header(self.title)
         cc[4].write(self._popover_chart_options_style(), unsafe_allow_html=True)
@@ -345,19 +377,25 @@ class Chart:
         orientation: Optional[str] = None,
         colormaps: Optional[Dict[str, Any]] = None,
         map_theme: Optional[str] = None,  # Light or Dark
-        pre_filtered_data: Optional[pl.DataFrame] = None,
         **kwargs: Any,
     ) -> None:
-        if pre_filtered_data is not None:
-            self.data_chart = pre_filtered_data
-        else:
-            self.data_chart = self.group_by_date(
+        self.data_chart = self.group_by_date(
             self.data,
             date_grouping=self.date_grouping,
             date_col=self.date_col,
             grp_col=self.color,
             extra_grp_cols=[self.bar_group] if self.bar_group else None,
         )
+        if (
+            self.date_grouping
+            and self.min_date_grouping is not None
+            and self.max_date_grouping is not None
+            and "DateGrouping" in self.data_chart.columns
+        ):
+            self.data_chart = self.data_chart.filter(
+                (pl.col("DateGrouping") >= self.min_date_grouping)
+                & (pl.col("DateGrouping") <= self.max_date_grouping)
+            )
         df = self.data_chart
         if self.graph_type == "map":
             if "lat" not in df.columns or "lon" not in df.columns:
