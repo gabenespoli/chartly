@@ -250,10 +250,11 @@ class Chart:
             index=0,
             key=f"{self.id}_min_date_grouping",
         )
+        options_desc = list(reversed(options))
         self.max_date_grouping = cols[1].selectbox(
             label="Max Date",
-            options=options,
-            index=len(options) - 1,
+            options=options_desc,
+            index=0,
             key=f"{self.id}_max_date_grouping",
         )
 
