@@ -32,6 +32,8 @@ def millify(
 ) -> str:
     """Format a number with human-readable suffixes (k, M, B, T, etc.).
 
+    Based on `millify <https://github.com/azaitsev/millify>`_ by Alexander Zaitsev.
+
     Args:
         n: The number to format.
         precision: Number of significant digits to keep.
@@ -48,7 +50,6 @@ def millify(
         '42'
     """
     prefixes = prefixes or []
-    # https://github.com/azaitsev/millify
     millnames = ["", "k", "M", "B", "T", "P", "E", "Z", "Y"]
     if prefixes:
         millnames = [""]
