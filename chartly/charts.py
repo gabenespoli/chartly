@@ -1,4 +1,5 @@
 from datetime import date
+from datetime import timedelta
 from typing import Any
 from typing import Dict
 from typing import List
@@ -177,6 +178,7 @@ class Chart:
         default: Optional[str] = None,
         default_min: Optional[str] = None,
         default_max: Optional[str] = None,
+        default_max_complete_period: Optional[date] = None,
     ) -> None:
         default = default or self.default_date_grouping
         if default in DATE_GROUPING_MAP:
@@ -189,6 +191,8 @@ class Chart:
             index=index,
         )
         self.add_date_grouping_column()
+        if default_max is None and default_max_complete_period is not None:
+            default_max = self.get_last_complete_period(default_max_complete_period)
         self.get_date_range_filter(default_min=default_min, default_max=default_max)
 
     def add_date_grouping_column(self) -> None:
@@ -232,6 +236,69 @@ class Chart:
                 )
         elif isinstance(self.data, pd.DataFrame):
             self.data["DateGrouping"] = self.data[self.date_col].dt.strftime(fmt)
+
+    def get_last_complete_period(self, dt: date) -> Optional[str]:
+        """Return the DateGrouping string for the most recent complete period
+        that ended before `dt`, based on self.date_grouping.
+
+        Args:
+            dt: The reference date (e.g., date.today()).
+
+        Returns:
+            The DateGrouping string, or None if date_grouping is not set.
+        """
+        if self.date_grouping is None:
+            return None
+
+        if self.date_grouping == "Daily":
+            d = dt - timedelta(days=1)
+            return d.strftime("%Y-%m-%d")
+
+        elif self.date_grouping == "Weekly":
+            # Go to the last day of the previous complete week (Sunday before this week's Monday)
+            days_since_monday = dt.weekday()  # Monday=0
+            last_monday = dt - timedelta(days=days_since_monday)
+            # Last complete week ended the Sunday before last_monday
+            last_day_prev_week = last_monday - timedelta(days=1)
+            return last_day_prev_week.strftime("%Y-W%V")
+
+        elif self.date_grouping == "Bi-Weekly":
+            # Current ISO week
+            w = dt.isocalendar()[1]
+            year = dt.isocalendar()[0]
+            # Current bi-weekly bucket
+            b = ((w - 1) // 2 * 2 + 1)
+            # If we're still in the bucket's 2-week span (week b or b+1),
+            # the current bucket isn't complete yet, use previous bucket
+            if w <= b + 1:
+                b = b - 2
+                if b < 1:
+                    year = year - 1
+                    # Get last ISO week of previous year
+                    last_day_prev_year = date(year, 12, 28)
+                    last_week = last_day_prev_year.isocalendar()[1]
+                    b = ((last_week - 1) // 2 * 2 + 1)
+            return f"{year}-W{b:02d}"
+
+        elif self.date_grouping == "Monthly":
+            # First of current month minus 1 day = last day of previous month
+            first_of_month = dt.replace(day=1)
+            last_day_prev_month = first_of_month - timedelta(days=1)
+            return last_day_prev_month.strftime("%Y-%m")
+
+        elif self.date_grouping == "Quarterly":
+            # Current quarter
+            current_q = (dt.month - 1) // 3 + 1
+            # Previous complete quarter
+            if current_q == 1:
+                return f"{dt.year - 1}-Q4"
+            else:
+                return f"{dt.year}-Q{current_q - 1}"
+
+        elif self.date_grouping == "Yearly":
+            return str(dt.year - 1)
+
+        return None
 
     def get_date_range_filter(
         self,
