@@ -1,3 +1,11 @@
+"""High-level Chart component for interactive data exploration in Streamlit.
+
+This module provides the :class:`Chart` class which renders a full interactive
+chart widget — including axis selectors, graph-type picker, color/facet/size
+options, date grouping, and the Plotly figure itself — with a single
+instantiation call.
+"""
+
 from datetime import date
 from datetime import timedelta
 from typing import Any
@@ -33,6 +41,27 @@ DATE_GROUPING_MAP = {
 
 
 class Chart:
+    """Interactive chart widget that renders Streamlit controls and a Plotly figure.
+
+    Instantiate a ``Chart`` with your DataFrame and field options. The widget
+    automatically renders dropdown selectors for graph type, x/y axes, color,
+    facets, bar mode, size, marginal plots, and more. Call
+    :meth:`update_figure` and :meth:`show_figure` to display the chart.
+
+    Example:
+        >>> import polars as pl
+        >>> from chartly import Chart
+        >>> df = pl.DataFrame({"Category": ["A", "B"], "Sales": [100, 200]})
+        >>> chart = Chart(
+        ...     id="sales_chart",
+        ...     data=df,
+        ...     default_x="Category",
+        ...     default_y="Sales",
+        ... )
+        >>> chart.update_figure()
+        >>> chart.show_figure()
+    """
+
     def __init__(
         self,
         id: str,
@@ -40,7 +69,7 @@ class Chart:
         data: Optional[pl.DataFrame] = None,
         y_opts: Optional[List[str]] = None,
         x_opts: Optional[List[str]] = None,
-        color_opts: Optional[List[Optional[str]]] = None,  # also for size, facet_col, facet_row
+        color_opts: Optional[List[Optional[str]]] = None,
         size_opts: Optional[List[str]] = None,
         default_y: Optional[str] = None,
         default_x: Optional[str] = None,
@@ -63,6 +92,46 @@ class Chart:
         map_hover_cols: Optional[List[str]] = None,
         map_hover_name: Optional[str] = None,
     ) -> None:
+        """Initialize the Chart widget and render option controls.
+
+        Args:
+            id: Unique identifier for this chart instance (used for Streamlit widget keys).
+            title: Display title shown above the chart. Defaults to ``id``.
+            data: The source DataFrame (Polars or Pandas) to visualize.
+            y_opts: Column names available for the y-axis selector.
+                Defaults to all columns in ``data``.
+            x_opts: Column names available for the x-axis selector.
+                Defaults to all columns in ``data``.
+            color_opts: Column names available for the color (and facet/size) selectors.
+                ``None`` is prepended automatically to allow "no color" selection.
+            size_opts: Column names available for the bubble-size selector.
+                Defaults to all columns in ``data``.
+            default_y: Default selected y-axis column.
+            default_x: Default selected x-axis column.
+            default_color: Default selected color column.
+            default_graph_type: Default graph type (bar, line, scatter, donut, sunburst, map).
+            default_facet_col: Default column for faceted column splits.
+            default_facet_row: Default column for faceted row splits.
+            default_size: Default column for marker/bubble size.
+            default_barmode: Default bar mode — "grouped", "stacked", "overlaid", or
+                "grouped+stacked".
+            default_bar_group: Default column for grouped+stacked bar grouping.
+            default_marginal: Default marginal plot type for scatter (box, histogram,
+                rug, violin).
+            default_date_grouping: Default date grouping level (Daily, Weekly,
+                Bi-Weekly, Monthly, Quarterly, Yearly).
+            default_height: Default chart height in pixels.
+            default_histogram_bins: Default number of bins for marginal histograms.
+            default_orientation_h: If True, default to horizontal bars.
+            default_sort_legend_by_value: If True, sort legend entries by total value.
+            colormaps: Dictionary mapping column names to color maps
+                (e.g., ``{"Status": {"Active": "green", "Inactive": "red"}}``).
+            date_col: Name of the datetime column for date grouping.
+            date_grouping: Initial date grouping to apply (overrides default_date_grouping
+                if provided).
+            map_hover_cols: Additional columns to display on map hover tooltips.
+            map_hover_name: Column whose values label map markers on hover.
+        """
         self.id = id
         self.title = title or id
         self.data = data
@@ -111,6 +180,14 @@ class Chart:
 
     @staticmethod
     def header(title: str) -> List[Any]:
+        """Render a Streamlit header row with columns for title and selectors.
+
+        Args:
+            title: The title text to display in the header.
+
+        Returns:
+            A list of Streamlit column containers for placing additional widgets.
+        """
         cc = st.columns([8, 4, 4, 4, 3])
         cc[0].markdown(f"<h1>| {title}</h1>", unsafe_allow_html=True)
         return cc
@@ -127,6 +204,25 @@ class Chart:
         grp_col: Optional[str] = None,
         extra_grp_cols: Optional[List[str]] = None,
     ) -> Union[pd.DataFrame, pl.DataFrame]:
+        """Aggregate a DataFrame by a time period, summing an 'Amount' column.
+
+        Groups the data by the specified date granularity and any additional
+        grouping columns, then sums the ``Amount`` column. Adds a
+        ``DateGrouping`` string column representing the period label.
+
+        Args:
+            df: Input DataFrame (Pandas or Polars) containing a date column and
+                an ``Amount`` column to aggregate.
+            date_grouping: Grouping level — one of "Daily", "Weekly",
+                "Bi-Weekly", "Monthly", "Quarterly", "Yearly", or None (no grouping).
+            date_col: Name of the datetime column to group on.
+            grp_col: Optional additional column to include in the group-by.
+            extra_grp_cols: Additional columns to include in the group-by.
+
+        Returns:
+            A new DataFrame aggregated by the specified period with a
+            ``DateGrouping`` column added.
+        """
         if date_grouping is None:
             return df
         extra_grp_cols = extra_grp_cols or []
@@ -181,6 +277,26 @@ class Chart:
         default_max_complete_period: Optional[date] = None,
         default_min_num_periods: Optional[int] = None,
     ) -> None:
+        """Render a date grouping selector and optional date range filter.
+
+        Displays a selectbox for choosing the date aggregation level and
+        optionally renders min/max date selectors to constrain the visible
+        range. Updates ``self.date_grouping``, ``self.min_date_grouping``,
+        and ``self.max_date_grouping``.
+
+        Args:
+            default: Default date grouping level. Falls back to
+                ``self.default_date_grouping``.
+            default_min: Default minimum date grouping string for the range
+                filter.
+            default_max: Default maximum date grouping string for the range
+                filter.
+            default_max_complete_period: If set, automatically compute
+                ``default_max`` as the most recent complete period before this
+                date.
+            default_min_num_periods: If set, automatically compute
+                ``default_min`` as this many periods before ``default_max``.
+        """
         default = default or self.default_date_grouping
         if default in DATE_GROUPING_MAP:
             index = list(DATE_GROUPING_MAP.keys()).index(default) + 1
@@ -207,6 +323,12 @@ class Chart:
         self.get_date_range_filter(default_min=default_min, default_max=default_max)
 
     def add_date_grouping_column(self) -> None:
+        """Add a ``DateGrouping`` string column to ``self.data``.
+
+        Based on the current ``self.date_grouping`` setting, formats the date
+        column into a human-readable period label (e.g., "2024-03", "2024-Q1")
+        and stores it as a new column in the data.
+        """
         if self.data is None or self.date_col is None:
             return
 
@@ -414,6 +536,14 @@ class Chart:
         )
 
     def get_options(self) -> None:
+        """Render all chart option widgets in the Streamlit UI.
+
+        Creates the header row, axis selectors (x, y, color), and an options
+        popover containing graph type, facets, size, bar mode, marginals,
+        height, orientation, and legend sorting controls. Sets instance
+        attributes (``self.graph_type``, ``self.y``, ``self.x``, ``self.color``,
+        etc.) based on user selections.
+        """
         cc = self.header(self.title)
         cc[4].write(self._popover_chart_options_style(), unsafe_allow_html=True)
         pp = cc[4].popover("Options")
@@ -535,6 +665,21 @@ class Chart:
         map_theme: Optional[str] = None,  # Light or Dark
         **kwargs: Any,
     ) -> None:
+        """Build the Plotly figure based on current widget selections.
+
+        Performs date grouping/aggregation, applies date range filters, then
+        dispatches to the appropriate graph factory (bar/line/scatter, donut,
+        sunburst, or map). The resulting figure is stored in ``self.fig``.
+
+        Args:
+            orientation: Override orientation ("h" or "v"). Defaults to the
+                widget-selected orientation.
+            colormaps: Override color maps. Defaults to ``self.colormaps``.
+            map_theme: Map tile theme — "Light" or "Dark". Only applies when
+                ``graph_type`` is "map".
+            **kwargs: Additional keyword arguments passed to the underlying
+                graph factory function.
+        """
         self.data_chart = self.group_by_date(
             self.data,
             date_grouping=self.date_grouping,
@@ -640,6 +785,15 @@ class Chart:
                 )
 
     def show_figure(self, use_container_width: bool = True) -> None:
+        """Display the Plotly figure in the Streamlit app.
+
+        Args:
+            use_container_width: If True (default), the chart fills the
+                container width. If False, uses the figure's native width.
+
+        Raises:
+            Displays a Streamlit error if :meth:`update_figure` has not been called.
+        """
         if self.fig is not None:
             st.plotly_chart(
                 self.fig,
@@ -651,6 +805,13 @@ class Chart:
 
     @staticmethod
     def data_expander(df: Union[pd.DataFrame, pl.DataFrame], title: str, **kwargs: Any) -> None:
+        """Render a DataFrame inside a Streamlit expander with row count.
+
+        Args:
+            df: The DataFrame to display.
+            title: Label for the expander header.
+            **kwargs: Additional arguments passed to ``st.expander()``.
+        """
         with st.expander(f"{title} ({df.shape[0]} records)", **kwargs):
             st.dataframe(df)
 
@@ -661,15 +822,18 @@ class Chart:
         map_data: bool = True,
         sort_col: Optional[str] = None,
         sort_desc: bool = False,
-        **kwargs: Any,  # passed to st.expander()
+        **kwargs: Any,
     ) -> None:
-        """
-        raw_data: If True, show the raw data.
-        chart_data: If True, show the grouped/aggregated chart data.
-        map_data: If True, and graph_type is map, show the data that has missing values,
-            preventing it from being shown on the map.
-        sort_col: Column name to sort the data by.
-        sort_desc: If True, sort descending. Defaults to False (ascending).
+        """Display data tables in expandable sections below the chart.
+
+        Args:
+            raw_data: If True, show the full source data in an expander.
+            chart_data: If True, show the grouped/aggregated chart data.
+            map_data: If True and graph_type is "map", show rows excluded from
+                the map due to missing lat/lon or size values.
+            sort_col: Column name to sort all displayed tables by.
+            sort_desc: If True, sort descending. Defaults to False (ascending).
+            **kwargs: Additional arguments passed to ``st.expander()``.
         """
         data = self.data
         data_chart = self.data_chart

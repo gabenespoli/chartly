@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chartly - Multi-Perspective Data Visualization</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg: #0f172a;
+            --bg-card: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #22d3ee;
+            --border: #334155;
+            --code-bg: #1e293b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
+
+        /* Nav */
+        nav {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+        }
+        nav .container { display: flex; align-items: center; justify-content: space-between; }
+        nav .logo { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+        nav ul { list-style: none; display: flex; gap: 2rem; }
+        nav ul a { color: var(--text-muted); font-size: 0.9rem; }
+        nav ul a:hover { color: var(--text); text-decoration: none; }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 6rem 0 4rem;
+            background: linear-gradient(180deg, rgba(99,102,241,0.08) 0%, transparent 100%);
+        }
+        .hero h1 { font-size: 3.5rem; font-weight: 800; margin-bottom: 1rem; }
+        .hero h1 span { color: var(--accent); }
+        .hero p { font-size: 1.25rem; color: var(--text-muted); max-width: 700px; margin: 0 auto 2rem; }
+        .hero-code {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: left;
+            max-width: 650px;
+            margin: 0 auto;
+            overflow-x: auto;
+        }
+        .hero-code pre { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9rem; color: var(--text); }
+        .kw { color: #c084fc; }
+        .fn { color: #22d3ee; }
+        .str { color: #86efac; }
+        .cm { color: #64748b; }
+
+        /* Sections */
+        section { padding: 4rem 0; }
+        section h2 { font-size: 2rem; font-weight: 700; margin-bottom: 1.5rem; }
+        section h3 { font-size: 1.3rem; font-weight: 600; margin: 2rem 0 0.75rem; color: var(--accent); }
+
+        /* API cards */
+        .api-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        .api-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.5rem 2rem;
+        }
+        .api-card h4 { font-family: 'SF Mono', monospace; font-size: 1rem; color: var(--accent); margin-bottom: 0.5rem; }
+        .api-card p { color: var(--text-muted); font-size: 0.95rem; }
+        .api-card code { background: var(--bg); padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.85rem; }
+
+        /* Params table */
+        .params { width: 100%; border-collapse: collapse; margin: 1rem 0 2rem; font-size: 0.9rem; }
+        .params th { text-align: left; padding: 0.5rem 1rem; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 500; }
+        .params td { padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .params td:first-child { font-family: monospace; color: var(--accent); white-space: nowrap; }
+
+        /* Footer */
+        footer { border-top: 1px solid var(--border); padding: 2rem 0; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.2rem; }
+            nav ul { gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="container">
+        <div class="logo">chartly</div>
+        <ul>
+            <li><a href="#quickstart">Quickstart</a></li>
+            <li><a href="#api-chart">Chart</a></li>
+            <li><a href="#api-filter">Filter</a></li>
+            <li><a href="#api-graphs">Graphs</a></li>
+            <li><a href="https://github.com/gabenespoli/chartly">GitHub</a></li>
+        </ul>
+    </div>
+</nav>
+
+<div class="hero">
+    <div class="container">
+        <h1>One DataFrame.<br><span>Every Angle.</span></h1>
+        <p>
+            Give Chartly a DataFrame, pick your fields, set your defaults, and
+            explore your data from many perspectives in a single interactive chart.
+        </p>
+        <div class="hero-code">
+<pre><span class="kw">from</span> chartly <span class="kw">import</span> Chart
+<span class="kw">import</span> polars <span class="kw">as</span> pl
+
+df = pl.<span class="fn">read_csv</span>(<span class="str">"sales.csv"</span>)
+
+chart = <span class="fn">Chart</span>(
+    id=<span class="str">"revenue"</span>,
+    data=df,
+    default_x=<span class="str">"Region"</span>,
+    default_y=<span class="str">"Revenue"</span>,
+    default_color=<span class="str">"Product"</span>,
+    default_graph_type=<span class="str">"bar"</span>,
+    colormaps={<span class="str">"Product"</span>: {<span class="str">"Widget"</span>: <span class="str">"#6366f1"</span>, <span class="str">"Gadget"</span>: <span class="str">"#22d3ee"</span>}},
+)
+chart.<span class="fn">update_figure</span>()
+chart.<span class="fn">show_figure</span>()</pre>
+        </div>
+    </div>
+</div>
+
+<section id="quickstart">
+    <div class="container">
+        <h2>Quickstart</h2>
+        <h3>Install</h3>
+        <div class="hero-code"><pre>pip install git+https://github.com/gabenespoli/chartly.git</pre></div>
+
+        <h3>Basic Usage</h3>
+        <p>Chartly is designed for Streamlit apps. Import <code>Chart</code>, hand it your DataFrame and column preferences, and you get a fully interactive chart widget with dropdowns for graph type, axes, color, facets, date grouping, and more.</p>
+
+        <h3>With Filters</h3>
+        <div class="hero-code">
+<pre><span class="kw">from</span> chartly <span class="kw">import</span> Chart, Filter, filter_data
+
+<span class="cm"># Build interactive filters</span>
+flt = <span class="fn">Filter</span>(id=<span class="str">"sidebar"</span>)
+flt.<span class="fn">multiselect</span>(<span class="str">"Region"</span>, options=[<span class="str">"North"</span>, <span class="str">"South"</span>, <span class="str">"East"</span>, <span class="str">"West"</span>])
+flt.<span class="fn">selectbox</span>(<span class="str">"Year"</span>, options=[2023, 2024, 2025], filter_type=<span class="str">"gte"</span>)
+
+<span class="cm"># Apply filters to data</span>
+df_filtered = <span class="fn">filter_data</span>(df, flt)
+
+<span class="cm"># Render chart with all interactive controls</span>
+chart = <span class="fn">Chart</span>(id=<span class="str">"main"</span>, data=df_filtered, default_y=<span class="str">"Sales"</span>, default_x=<span class="str">"Month"</span>)
+chart.<span class="fn">update_figure</span>()
+chart.<span class="fn">show_figure</span>()</pre>
+        </div>
+
+        <h3>Date Grouping</h3>
+        <div class="hero-code">
+<pre><span class="cm"># Add a date grouping selector (Daily/Weekly/Monthly/Quarterly/Yearly)</span>
+chart = <span class="fn">Chart</span>(id=<span class="str">"ts"</span>, data=df, date_col=<span class="str">"Order Date"</span>, default_y=<span class="str">"Amount"</span>, default_x=<span class="str">"DateGrouping"</span>)
+chart.<span class="fn">get_date_grouping</span>(default=<span class="str">"Monthly"</span>, default_min_num_periods=12)
+chart.<span class="fn">update_figure</span>()
+chart.<span class="fn">show_figure</span>()</pre>
+        </div>
+    </div>
+</section>
+
+<section id="api-chart" style="background: rgba(99,102,241,0.03);">
+    <div class="container">
+        <h2>Chart Class</h2>
+        <p>The central component. Renders Streamlit controls and produces Plotly figures.</p>
+
+        <div class="api-grid">
+            <div class="api-card">
+                <h4>Chart(id, data, ...)</h4>
+                <p>Initialize the chart with a DataFrame and display options. Automatically renders selector widgets for graph type, x, y, color, facets, size, bar mode, marginals, and height.</p>
+            </div>
+            <div class="api-card">
+                <h4>chart.update_figure(**kwargs)</h4>
+                <p>Build the Plotly figure based on current widget selections. Handles date grouping, aggregation, date range filtering, and dispatches to the correct graph type.</p>
+            </div>
+            <div class="api-card">
+                <h4>chart.show_figure(use_container_width=True)</h4>
+                <p>Display the figure in Streamlit via <code>st.plotly_chart()</code>.</p>
+            </div>
+            <div class="api-card">
+                <h4>chart.get_date_grouping(default, ...)</h4>
+                <p>Render a date grouping selector (Daily through Yearly) and optional min/max date range filter.</p>
+            </div>
+            <div class="api-card">
+                <h4>chart.show_data(raw_data, chart_data, map_data, ...)</h4>
+                <p>Show data tables in expandable sections below the chart for debugging and exploration.</p>
+            </div>
+            <div class="api-card">
+                <h4>Chart.group_by_date(df, date_grouping, date_col, ...)</h4>
+                <p>Static method. Aggregate a DataFrame by time period, summing an <code>Amount</code> column. Adds a <code>DateGrouping</code> label column.</p>
+            </div>
+        </div>
+
+        <h3>Constructor Parameters</h3>
+        <table class="params">
+            <tr><th>Parameter</th><th>Description</th></tr>
+            <tr><td>id</td><td>Unique identifier for Streamlit widget keys</td></tr>
+            <tr><td>data</td><td>Polars or Pandas DataFrame to visualize</td></tr>
+            <tr><td>y_opts / x_opts</td><td>Column names for axis selectors (defaults to all columns)</td></tr>
+            <tr><td>color_opts</td><td>Columns for color/facet/size selectors</td></tr>
+            <tr><td>default_*</td><td>Default selections for each control (y, x, color, graph_type, facet_col, facet_row, size, barmode, bar_group, marginal, date_grouping, height, histogram_bins, orientation_h, sort_legend_by_value)</td></tr>
+            <tr><td>colormaps</td><td>Dict mapping column names to color dicts, e.g. <code>{"Status": {"Active": "green"}}</code></td></tr>
+            <tr><td>date_col</td><td>Datetime column for date grouping</td></tr>
+            <tr><td>map_hover_cols</td><td>Extra columns for map hover tooltips</td></tr>
+        </table>
+    </div>
+</section>
+
+<section id="api-filter">
+    <div class="container">
+        <h2>Filter Class</h2>
+        <p>Build reusable, cacheable filter UIs that apply to Polars DataFrames or generate SQL.</p>
+
+        <div class="api-grid">
+            <div class="api-card">
+                <h4>Filter(id, filters=None, label_visibility="visible")</h4>
+                <p>Initialize a filter group with a unique ID.</p>
+            </div>
+            <div class="api-card">
+                <h4>flt.selectbox(label, options, default, col_name, filter_type, bypass_option, ...)</h4>
+                <p>Add a single-select filter. Supports comparison operators: eq, gte, lte, gt, lt. The <code>bypass_option</code> acts as an "All" selection that skips filtering.</p>
+            </div>
+            <div class="api-card">
+                <h4>flt.multiselect(label, options, default, col_name, ...)</h4>
+                <p>Add a multi-select filter. Rows are kept where the column value is in the selected list.</p>
+            </div>
+            <div class="api-card">
+                <h4>flt.filter_sql(where_or_and="WHERE", prefix="")</h4>
+                <p>Generate a SQL WHERE clause from active selections.</p>
+            </div>
+            <div class="api-card">
+                <h4>filter_data(df, flt, names=None, return_size_too=False)</h4>
+                <p>Apply filter selections to a Polars DataFrame. Cached by Streamlit for performance.</p>
+            </div>
+            <div class="api-card">
+                <h4>combine_filters(filter1, filter2)</h4>
+                <p>Merge two Filter objects, preferring non-empty values from filter1.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="api-graphs" style="background: rgba(99,102,241,0.03);">
+    <div class="container">
+        <h2>Graphs Module</h2>
+        <p>Low-level Plotly figure factories with opinionated defaults.</p>
+
+        <div class="api-grid">
+            <div class="api-card">
+                <h4>graphs.graph(df, graph_type="bar", ...)</h4>
+                <p>Create bar, line, or scatter figures. Supports grouped+stacked bars, auto-aggregation, legend sorting by value, color maps, and category ordering.</p>
+            </div>
+            <div class="api-card">
+                <h4>graphs.donut(df, values, names, ...)</h4>
+                <p>Create donut/pie charts with percentage + value labels and optional faceting.</p>
+            </div>
+            <div class="api-card">
+                <h4>graphs.map(df, size_col, color_col, map_theme, ...)</h4>
+                <p>Create scatter mapbox figures from lat/lon data with size and color encoding.</p>
+            </div>
+            <div class="api-card">
+                <h4>graphs.sankey(df, node1, node2, node0="Total", cmap=None)</h4>
+                <p>Create 3-level Sankey diagrams from DataFrame columns.</p>
+            </div>
+            <div class="api-card">
+                <h4>graphs.sunburst(df, path, color, ...)</h4>
+                <p>Create sunburst charts for hierarchical data exploration.</p>
+            </div>
+            <div class="api-card">
+                <h4>graphs.waterfall(sv1, n_top_features=9)</h4>
+                <p>Create horizontal waterfall plots, designed for SHAP value visualization.</p>
+            </div>
+            <div class="api-card">
+                <h4>graphs.millify(n, precision=2)</h4>
+                <p>Format numbers with human-readable suffixes (k, M, B, T).</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="api-utils">
+    <div class="container">
+        <h2>Utilities</h2>
+        <div class="api-grid">
+            <div class="api-card">
+                <h4>utils.pl2pd(df)</h4>
+                <p>Convert a Polars DataFrame to Pandas, preserving date columns as <code>datetime.date</code> objects.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="container">
+        <p>Chartly &mdash; built by <a href="https://github.com/gabenespoli">Gabe Nespoli</a></p>
+    </div>
+</footer>
+
+</body>
+</html>
