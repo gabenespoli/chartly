@@ -172,7 +172,12 @@ class Chart:
                 df = df.with_columns(pl.col(date_col).dt.strftime("%Y-%m-%d").alias("DateGrouping"))
         return df
 
-    def get_date_grouping(self, default: Optional[str] = None) -> None:
+    def get_date_grouping(
+        self,
+        default: Optional[str] = None,
+        default_min: Optional[str] = None,
+        default_max: Optional[str] = None,
+    ) -> None:
         default = default or self.default_date_grouping
         if default in DATE_GROUPING_MAP:
             index = list(DATE_GROUPING_MAP.keys()).index(default) + 1
@@ -184,6 +189,7 @@ class Chart:
             index=index,
         )
         self.add_date_grouping_column()
+        self.get_date_range_filter(default_min=default_min, default_max=default_max)
 
     def add_date_grouping_column(self) -> None:
         if self.data is None or self.date_col is None:
@@ -227,9 +233,19 @@ class Chart:
         elif isinstance(self.data, pd.DataFrame):
             self.data["DateGrouping"] = self.data[self.date_col].dt.strftime(fmt)
 
-    def get_date_range_filter(self) -> None:
+    def get_date_range_filter(
+        self,
+        default_min: Optional[str] = None,
+        default_max: Optional[str] = None,
+    ) -> None:
         """Render Min/Max Date selectboxes based on available DateGrouping values.
         The selected range is used to automatically filter data in update_figure().
+
+        Args:
+            default_min: Default value for the Min Date selectbox. If None, defaults to
+                the earliest available date grouping.
+            default_max: Default value for the Max Date selectbox. If None, defaults to
+                the latest available date grouping.
         """
         if self.data is None or self.date_grouping is None:
             return
@@ -243,18 +259,20 @@ class Chart:
             return
         if not options:
             return
+        min_index = options.index(default_min) if default_min and default_min in options else 0
         cols = st.columns(2)
         self.min_date_grouping = cols[0].selectbox(
             label="Min Date",
             options=options,
-            index=0,
+            index=min_index,
             key=f"{self.id}_min_date_grouping",
         )
         options_desc = list(reversed(options))
+        max_index = options_desc.index(default_max) if default_max and default_max in options_desc else 0
         self.max_date_grouping = cols[1].selectbox(
             label="Max Date",
             options=options_desc,
-            index=0,
+            index=max_index,
             key=f"{self.id}_max_date_grouping",
         )
 
