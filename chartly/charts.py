@@ -659,6 +659,8 @@ class Chart:
         raw_data: bool = True,
         chart_data: bool = False,
         map_data: bool = True,
+        sort_col: Optional[str] = None,
+        sort_desc: bool = False,
         **kwargs: Any,  # passed to st.expander()
     ) -> None:
         """
@@ -666,11 +668,24 @@ class Chart:
         chart_data: If True, show the grouped/aggregated chart data.
         map_data: If True, and graph_type is map, show the data that has missing values,
             preventing it from being shown on the map.
+        sort_col: Column name to sort the data by.
+        sort_desc: If True, sort descending. Defaults to False (ascending).
         """
+        data = self.data
+        data_chart = self.data_chart
+        if sort_col is not None:
+            if isinstance(data, pl.DataFrame) and sort_col in data.columns:
+                data = data.sort(sort_col, descending=sort_desc)
+            elif isinstance(data, pd.DataFrame) and sort_col in data.columns:
+                data = data.sort_values(sort_col, ascending=not sort_desc)
+            if isinstance(data_chart, pl.DataFrame) and sort_col in data_chart.columns:
+                data_chart = data_chart.sort(sort_col, descending=sort_desc)
+            elif isinstance(data_chart, pd.DataFrame) and sort_col in data_chart.columns:
+                data_chart = data_chart.sort_values(sort_col, ascending=not sort_desc)
         if raw_data:
-            self.data_expander(self.data, f"{self.title} data", **kwargs)
+            self.data_expander(data, f"{self.title} data", **kwargs)
         if chart_data:
-            self.data_expander(self.data_chart, f"{self.title} chart data", **kwargs)
+            self.data_expander(data_chart, f"{self.title} chart data", **kwargs)
         if map_data and self.graph_type == "map":
             self.data_expander(
                 self.data_nomap, f"{self.title} data missing lat/lon", **kwargs
