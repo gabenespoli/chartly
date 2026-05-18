@@ -540,7 +540,7 @@ class Chart:
             date_grouping=self.date_grouping,
             date_col=self.date_col,
             grp_col=self.color,
-            extra_grp_cols=[self.bar_group] if self.bar_group else None,
+            extra_grp_cols=[self.bar_group] if self.bar_group and self.barmode == "grouped+stacked" else None,
         )
         if (
             self.date_grouping
@@ -627,7 +627,7 @@ class Chart:
                 height=self.height,
                 sort_legend_by_value=self.sort_legend_by_value,
                 colormaps=colormaps or self.colormaps,
-                bar_group=self.bar_group,
+                bar_group=self.bar_group if self.barmode == "grouped+stacked" else None,
                 **marginal_args,
                 **kwargs,
             )
