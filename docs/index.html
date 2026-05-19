@@ -1,126 +1,348 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chartly - Multi-Perspective Data Visualization</title>
+    <title>Chartly Documentation</title>
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --bg: #0f172a;
-            --bg-card: #1e293b;
-            --text: #e2e8f0;
-            --text-muted: #94a3b8;
-            --accent: #22d3ee;
-            --border: #334155;
-            --code-bg: #1e293b;
+            --primary: #150458;
+            --primary-light: #e8d5f5;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --bg: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --text: #212529;
+            --text-muted: #6c757d;
+            --border: #dee2e6;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.1);
+            --code-bg: #f4f4f7;
+            --link: #6366f1;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: var(--bg);
             color: var(--text);
-            line-height: 1.7;
+            line-height: 1.6;
+            font-size: 16px;
         }
-        a { color: var(--accent); text-decoration: none; }
+        a { color: var(--link); text-decoration: none; }
         a:hover { text-decoration: underline; }
-        .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
-
-        /* Nav */
-        nav {
-            position: sticky; top: 0; z-index: 100;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(8px);
-            border-bottom: 1px solid var(--border);
-            padding: 1rem 0;
+        code {
+            background: var(--code-bg);
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+            font-size: 0.88em;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
         }
-        nav .container { display: flex; align-items: center; justify-content: space-between; }
-        nav .logo { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
-        nav ul { list-style: none; display: flex; gap: 2rem; }
-        nav ul a { color: var(--text-muted); font-size: 0.9rem; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
+
+        /* Header / Navbar */
+        header {
+            border-bottom: 1px solid var(--border);
+            background: var(--bg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        header .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .logo span { color: var(--accent); }
+        nav ul { list-style: none; display: flex; gap: 1.5rem; align-items: center; }
+        nav ul a { color: var(--text-muted); font-size: 0.9rem; font-weight: 500; }
         nav ul a:hover { color: var(--text); text-decoration: none; }
 
         /* Hero */
         .hero {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 3rem 0;
             text-align: center;
-            padding: 6rem 0 4rem;
-            background: linear-gradient(180deg, rgba(99,102,241,0.08) 0%, transparent 100%);
         }
-        .hero h1 { font-size: 3.5rem; font-weight: 800; margin-bottom: 1rem; }
-        .hero h1 span { color: var(--accent); }
-        .hero p { font-size: 1.25rem; color: var(--text-muted); max-width: 700px; margin: 0 auto 2rem; }
-        .hero-code {
-            background: var(--code-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 2rem;
-            text-align: left;
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
             max-width: 650px;
-            margin: 0 auto;
-            overflow-x: auto;
+            margin: 0 auto 1.5rem;
         }
-        .hero-code pre { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9rem; color: var(--text); }
-        .kw { color: #c084fc; }
-        .fn { color: #22d3ee; }
-        .str { color: #86efac; }
-        .cm { color: #64748b; }
+        .hero-links { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .hero-links a {
+            display: inline-block;
+            padding: 0.5rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .btn-primary { background: var(--accent); color: #fff !important; }
+        .btn-primary:hover { background: var(--accent-hover); text-decoration: none; }
+        .btn-secondary { border: 1px solid var(--border); color: var(--text) !important; }
+        .btn-secondary:hover { border-color: var(--accent); text-decoration: none; }
+
+        /* Intro cards grid (pandas style) */
+        .intro-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            padding: 3rem 0;
+        }
+        .intro-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.75rem;
+            box-shadow: var(--card-shadow);
+            transition: box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        .intro-card:hover { box-shadow: var(--card-shadow-hover); }
+        .intro-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+        .intro-card p { color: var(--text-muted); font-size: 0.92rem; flex: 1; }
+        .intro-card .card-link {
+            display: inline-block;
+            margin-top: 1rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
 
         /* Sections */
-        section { padding: 4rem 0; }
-        section h2 { font-size: 2rem; font-weight: 700; margin-bottom: 1.5rem; }
-        section h3 { font-size: 1.3rem; font-weight: 600; margin: 2rem 0 0.75rem; color: var(--accent); }
+        section { padding: 3rem 0; border-top: 1px solid var(--border); }
+        section h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        section > .container > p { color: var(--text-muted); margin-bottom: 1.5rem; }
+        section h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin: 2rem 0 0.75rem;
+            color: var(--text);
+        }
+
+        /* Code blocks */
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.25rem 1.5rem;
+            overflow-x: auto;
+            margin: 1rem 0 1.5rem;
+        }
+        .code-block pre {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: var(--text);
+        }
+        .kw { color: #8b5cf6; }
+        .fn { color: #2563eb; }
+        .str { color: #059669; }
+        .cm { color: #6b7280; font-style: italic; }
 
         /* API cards */
-        .api-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        .api-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
         .api-card {
-            background: var(--bg-card);
+            background: var(--bg-secondary);
             border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 1.5rem 2rem;
+            border-radius: 6px;
+            padding: 1.25rem 1.5rem;
         }
-        .api-card h4 { font-family: 'SF Mono', monospace; font-size: 1rem; color: var(--accent); margin-bottom: 0.5rem; }
-        .api-card p { color: var(--text-muted); font-size: 0.95rem; }
-        .api-card code { background: var(--bg); padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.85rem; }
+        .api-card h4 {
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 0.92rem;
+            color: var(--accent);
+            margin-bottom: 0.4rem;
+            font-weight: 600;
+        }
+        .api-card p { color: var(--text-muted); font-size: 0.9rem; }
 
         /* Params table */
-        .params { width: 100%; border-collapse: collapse; margin: 1rem 0 2rem; font-size: 0.9rem; }
-        .params th { text-align: left; padding: 0.5rem 1rem; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 500; }
-        .params td { padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); vertical-align: top; }
-        .params td:first-child { font-family: monospace; color: var(--accent); white-space: nowrap; }
+        .params {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0 2rem;
+            font-size: 0.9rem;
+        }
+        .params th {
+            text-align: left;
+            padding: 0.6rem 1rem;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .params td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        .params td:first-child {
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 0.85rem;
+            color: var(--accent);
+            white-space: nowrap;
+            font-weight: 500;
+        }
 
         /* Footer */
-        footer { border-top: 1px solid var(--border); padding: 2rem 0; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 1.5rem 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            background: var(--bg-secondary);
+        }
+
+        /* Dark theme */
+        [data-theme="dark"] {
+            --primary: #e2e8f0;
+            --primary-light: #1e293b;
+            --accent: #22d3ee;
+            --accent-hover: #06b6d4;
+            --bg: #0f172a;
+            --bg-secondary: #1e293b;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+            --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.4);
+            --code-bg: #1e293b;
+            --link: #22d3ee;
+        }
+        [data-theme="dark"] .kw { color: #a78bfa; }
+        [data-theme="dark"] .fn { color: #60a5fa; }
+        [data-theme="dark"] .str { color: #34d399; }
+        [data-theme="dark"] .cm { color: #64748b; }
+        [data-theme="dark"] .btn-primary { background: #6366f1; }
+        [data-theme="dark"] .btn-primary:hover { background: #4f46e5; }
+        [data-theme="dark"] .btn-secondary { color: var(--text) !important; border-color: var(--border); }
+        [data-theme="dark"] header { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); }
+
+        /* Theme toggle */
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.4rem 0.6rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            line-height: 1;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .theme-toggle:hover { color: var(--text); border-color: var(--accent); }
 
         @media (max-width: 768px) {
-            .hero h1 { font-size: 2.2rem; }
-            nav ul { gap: 1rem; }
+            .hero h1 { font-size: 1.8rem; }
+            nav ul { gap: 0.75rem; }
+            .intro-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
 
-<nav>
+<header>
     <div class="container">
-        <div class="logo">chartly</div>
-        <ul>
-            <li><a href="#quickstart">Quickstart</a></li>
-            <li><a href="#api-chart">Chart</a></li>
-            <li><a href="#api-filter">Filter</a></li>
-            <li><a href="#api-graphs">Graphs</a></li>
-            <li><a href="https://github.com/gabenespoli/chartly">GitHub</a></li>
-        </ul>
+        <div class="logo"><span>chartly</span> documentation</div>
+        <nav>
+            <ul>
+                <li><a href="#getting-started">Getting Started</a></li>
+                <li><a href="#api-chart">API Reference</a></li>
+                <li><a href="https://github.com/gabenespoli/chartly">GitHub</a></li>
+                <li><button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">&#9790;</button></li>
+            </ul>
+        </nav>
     </div>
-</nav>
+</header>
 
 <div class="hero">
     <div class="container">
-        <h1>One DataFrame.<br><span>Every Angle.</span></h1>
+        <h1>chartly</h1>
         <p>
-            Give Chartly a DataFrame, pick your fields, set your defaults, and
-            explore your data from many perspectives in a single interactive chart.
+            An open-source Python library for interactive, multi-perspective data
+            visualization built on Plotly and Streamlit.
         </p>
-        <div class="hero-code">
+        <div class="hero-links">
+            <a href="#getting-started" class="btn-primary">Getting Started</a>
+            <a href="#api-chart" class="btn-secondary">API Reference</a>
+            <a href="https://github.com/gabenespoli/chartly" class="btn-secondary">Source Repository</a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="intro-grid">
+        <div class="intro-card">
+            <h3>Getting Started</h3>
+            <p>New to chartly? Install the package, hand it a DataFrame, and get an
+            interactive multi-chart widget in three lines of code.</p>
+            <a href="#getting-started" class="card-link">To the getting started guide &rarr;</a>
+        </div>
+        <div class="intro-card">
+            <h3>Chart Class</h3>
+            <p>The central widget. Configure your axes, colors, graph type, and defaults —
+            chartly renders all interactive controls and the Plotly figure for you.</p>
+            <a href="#api-chart" class="card-link">To the Chart reference &rarr;</a>
+        </div>
+        <div class="intro-card">
+            <h3>Filter Class</h3>
+            <p>Build reusable, cached Streamlit filter UIs that apply to Polars
+            DataFrames or generate SQL WHERE clauses.</p>
+            <a href="#api-filter" class="card-link">To the Filter reference &rarr;</a>
+        </div>
+        <div class="intro-card">
+            <h3>Graphs Module</h3>
+            <p>Low-level Plotly figure factories for bar, line, scatter, donut,
+            sunburst, map, sankey, and waterfall charts with opinionated defaults.</p>
+            <a href="#api-graphs" class="card-link">To the Graphs reference &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<section id="getting-started">
+    <div class="container">
+        <h2>Getting Started</h2>
+        <p>Install chartly and build your first interactive chart in minutes.</p>
+
+        <h3>Installation</h3>
+        <div class="code-block"><pre>pip install git+https://github.com/gabenespoli/chartly.git</pre></div>
+
+        <h3>Minimal Example</h3>
+        <p>Give chartly a DataFrame, choose your fields, and set your defaults. Users can then
+        explore the data from many different angles in one interactive chart.</p>
+        <div class="code-block">
 <pre><span class="kw">from</span> chartly <span class="kw">import</span> Chart
 <span class="kw">import</span> polars <span class="kw">as</span> pl
 
@@ -138,20 +360,9 @@ chart = <span class="fn">Chart</span>(
 chart.<span class="fn">update_figure</span>()
 chart.<span class="fn">show_figure</span>()</pre>
         </div>
-    </div>
-</div>
-
-<section id="quickstart">
-    <div class="container">
-        <h2>Quickstart</h2>
-        <h3>Install</h3>
-        <div class="hero-code"><pre>pip install git+https://github.com/gabenespoli/chartly.git</pre></div>
-
-        <h3>Basic Usage</h3>
-        <p>Chartly is designed for Streamlit apps. Import <code>Chart</code>, hand it your DataFrame and column preferences, and you get a fully interactive chart widget with dropdowns for graph type, axes, color, facets, date grouping, and more.</p>
 
         <h3>With Filters</h3>
-        <div class="hero-code">
+        <div class="code-block">
 <pre><span class="kw">from</span> chartly <span class="kw">import</span> Chart, Filter, filter_data
 
 <span class="cm"># Build interactive filters</span>
@@ -159,7 +370,7 @@ flt = <span class="fn">Filter</span>(id=<span class="str">"sidebar"</span>)
 flt.<span class="fn">multiselect</span>(<span class="str">"Region"</span>, options=[<span class="str">"North"</span>, <span class="str">"South"</span>, <span class="str">"East"</span>, <span class="str">"West"</span>])
 flt.<span class="fn">selectbox</span>(<span class="str">"Year"</span>, options=[2023, 2024, 2025], filter_type=<span class="str">"gte"</span>)
 
-<span class="cm"># Apply filters to data</span>
+<span class="cm"># Apply filters to data (cached automatically)</span>
 df_filtered = <span class="fn">filter_data</span>(df, flt)
 
 <span class="cm"># Render chart with all interactive controls</span>
@@ -169,9 +380,17 @@ chart.<span class="fn">show_figure</span>()</pre>
         </div>
 
         <h3>Date Grouping</h3>
-        <div class="hero-code">
+        <p>Chartly provides automatic date aggregation with a user-selectable grouping level.</p>
+        <div class="code-block">
 <pre><span class="cm"># Add a date grouping selector (Daily/Weekly/Monthly/Quarterly/Yearly)</span>
-chart = <span class="fn">Chart</span>(id=<span class="str">"ts"</span>, data=df, date_col=<span class="str">"Order Date"</span>, default_y=<span class="str">"Amount"</span>, default_x=<span class="str">"DateGrouping"</span>)
+chart = <span class="fn">Chart</span>(
+    id=<span class="str">"timeseries"</span>,
+    data=df,
+    date_col=<span class="str">"Order Date"</span>,
+    default_y=<span class="str">"Amount"</span>,
+    default_x=<span class="str">"DateGrouping"</span>,
+    default_color=<span class="str">"Category"</span>,
+)
 chart.<span class="fn">get_date_grouping</span>(default=<span class="str">"Monthly"</span>, default_min_num_periods=12)
 chart.<span class="fn">update_figure</span>()
 chart.<span class="fn">show_figure</span>()</pre>
@@ -179,10 +398,10 @@ chart.<span class="fn">show_figure</span>()</pre>
     </div>
 </section>
 
-<section id="api-chart" style="background: rgba(99,102,241,0.03);">
+<section id="api-chart">
     <div class="container">
-        <h2>Chart Class</h2>
-        <p>The central component. Renders Streamlit controls and produces Plotly figures.</p>
+        <h2>Chart</h2>
+        <p>The central interactive widget. Renders Streamlit controls and produces Plotly figures.</p>
 
         <div class="api-grid">
             <div class="api-card">
@@ -209,6 +428,14 @@ chart.<span class="fn">show_figure</span>()</pre>
                 <h4>Chart.group_by_date(df, date_grouping, date_col, ...)</h4>
                 <p>Static method. Aggregate a DataFrame by time period, summing an <code>Amount</code> column. Adds a <code>DateGrouping</code> label column.</p>
             </div>
+            <div class="api-card">
+                <h4>Chart.header(title)</h4>
+                <p>Static method. Render a Streamlit header row with columns for title and selectors.</p>
+            </div>
+            <div class="api-card">
+                <h4>chart.highlight_monthly_regions(grouping, min_date, max_date, ...)</h4>
+                <p>Add alternating background shading and period annotations to bar charts for visual grouping by year, quarter, or half-year.</p>
+            </div>
         </div>
 
         <h3>Constructor Parameters</h3>
@@ -218,7 +445,16 @@ chart.<span class="fn">show_figure</span>()</pre>
             <tr><td>data</td><td>Polars or Pandas DataFrame to visualize</td></tr>
             <tr><td>y_opts / x_opts</td><td>Column names for axis selectors (defaults to all columns)</td></tr>
             <tr><td>color_opts</td><td>Columns for color/facet/size selectors</td></tr>
-            <tr><td>default_*</td><td>Default selections for each control (y, x, color, graph_type, facet_col, facet_row, size, barmode, bar_group, marginal, date_grouping, height, histogram_bins, orientation_h, sort_legend_by_value)</td></tr>
+            <tr><td>default_y</td><td>Default y-axis column</td></tr>
+            <tr><td>default_x</td><td>Default x-axis column</td></tr>
+            <tr><td>default_color</td><td>Default color-encoding column</td></tr>
+            <tr><td>default_graph_type</td><td>Default chart type (bar, line, scatter, donut, sunburst, map)</td></tr>
+            <tr><td>default_barmode</td><td>Bar mode: "grouped", "stacked", "overlaid", or "grouped+stacked"</td></tr>
+            <tr><td>default_facet_col / row</td><td>Default columns for faceted splits</td></tr>
+            <tr><td>default_size</td><td>Default column for marker/bubble size</td></tr>
+            <tr><td>default_marginal</td><td>Marginal plot type for scatter (box, histogram, rug, violin)</td></tr>
+            <tr><td>default_date_grouping</td><td>Default time aggregation level</td></tr>
+            <tr><td>default_height</td><td>Chart height in pixels</td></tr>
             <tr><td>colormaps</td><td>Dict mapping column names to color dicts, e.g. <code>{"Status": {"Active": "green"}}</code></td></tr>
             <tr><td>date_col</td><td>Datetime column for date grouping</td></tr>
             <tr><td>map_hover_cols</td><td>Extra columns for map hover tooltips</td></tr>
@@ -228,7 +464,7 @@ chart.<span class="fn">show_figure</span>()</pre>
 
 <section id="api-filter">
     <div class="container">
-        <h2>Filter Class</h2>
+        <h2>Filter</h2>
         <p>Build reusable, cacheable filter UIs that apply to Polars DataFrames or generate SQL.</p>
 
         <div class="api-grid">
@@ -246,24 +482,24 @@ chart.<span class="fn">show_figure</span>()</pre>
             </div>
             <div class="api-card">
                 <h4>flt.filter_sql(where_or_and="WHERE", prefix="")</h4>
-                <p>Generate a SQL WHERE clause from active selections.</p>
+                <p>Generate a SQL WHERE clause from active filter selections.</p>
             </div>
             <div class="api-card">
                 <h4>filter_data(df, flt, names=None, return_size_too=False)</h4>
-                <p>Apply filter selections to a Polars DataFrame. Cached by Streamlit for performance.</p>
+                <p>Apply filter selections to a Polars DataFrame. Cached by Streamlit for performance. Optionally returns row counts after each filter step.</p>
             </div>
             <div class="api-card">
                 <h4>combine_filters(filter1, filter2)</h4>
-                <p>Merge two Filter objects, preferring non-empty values from filter1.</p>
+                <p>Merge two Filter objects into one, preferring non-empty values from the first filter.</p>
             </div>
         </div>
     </div>
 </section>
 
-<section id="api-graphs" style="background: rgba(99,102,241,0.03);">
+<section id="api-graphs">
     <div class="container">
-        <h2>Graphs Module</h2>
-        <p>Low-level Plotly figure factories with opinionated defaults.</p>
+        <h2>Graphs</h2>
+        <p>Low-level Plotly figure factories with opinionated defaults for common chart types.</p>
 
         <div class="api-grid">
             <div class="api-card">
@@ -272,7 +508,7 @@ chart.<span class="fn">show_figure</span>()</pre>
             </div>
             <div class="api-card">
                 <h4>graphs.donut(df, values, names, ...)</h4>
-                <p>Create donut/pie charts with percentage + value labels and optional faceting.</p>
+                <p>Create donut/pie charts with percentage + value labels, optional faceting, and automatic color mapping.</p>
             </div>
             <div class="api-card">
                 <h4>graphs.map(df, size_col, color_col, map_theme, ...)</h4>
@@ -301,6 +537,7 @@ chart.<span class="fn">show_figure</span>()</pre>
 <section id="api-utils">
     <div class="container">
         <h2>Utilities</h2>
+        <p>Helper functions used internally and available for convenience.</p>
         <div class="api-grid">
             <div class="api-card">
                 <h4>utils.pl2pd(df)</h4>
@@ -312,9 +549,32 @@ chart.<span class="fn">show_figure</span>()</pre>
 
 <footer>
     <div class="container">
-        <p>Chartly &mdash; built by <a href="https://github.com/gabenespoli">Gabe Nespoli</a></p>
+        <p>Chartly &mdash; created by <a href="https://github.com/gabenespoli">Gabe Nespoli</a>.
+        Built with Plotly and Streamlit.</p>
     </div>
 </footer>
 
+<script>
+(function() {
+    const toggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    const stored = localStorage.getItem('chartly-theme');
+    const theme = stored || 'dark';
+    html.setAttribute('data-theme', theme);
+    updateIcon(theme);
+
+    toggle.addEventListener('click', function() {
+        const current = html.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('chartly-theme', next);
+        updateIcon(next);
+    });
+
+    function updateIcon(t) {
+        toggle.innerHTML = t === 'dark' ? '&#9788;' : '&#9790;';
+    }
+})();
+</script>
 </body>
 </html>
