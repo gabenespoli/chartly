@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chartly"
-version = "0.0.1"
+version = "0.0.7"
 description = "Utils for plotly and streamlit"
 readme = "README.md"
 requires-python = ">=3.7"
