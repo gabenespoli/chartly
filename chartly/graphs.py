@@ -732,48 +732,42 @@ def sunburst(df: Union[pd.DataFrame, pl.DataFrame], **kwargs: Any) -> go.Figure:
     return fig
 
 
-def waterfall(shap_values: pd.DataFrame, n_top_features: int = 9) -> go.Figure:
+def waterfall(
+    shap_values: Union[pd.DataFrame, pl.DataFrame], n_top_features: int = 9
+) -> go.Figure:
     """Waterfall plot for shap values.
 
-    The id should be the index of the pandas dataframe
+    The frame must hold a single row whose columns are the per-feature SHAP
+    contributions plus `E[f(x)]` and `f(x)`.
     """
-    base_value = shap_values["E[f(x)]"].iloc[0]
-    shap_values = shap_values.drop(columns=["E[f(x)]", "f(x)"])
-    # features are columns until the transpose below
-    feature_count = shap_values.shape[1]
-    n_top_features = min(n_top_features, feature_count)
-    n_other_features = feature_count - n_top_features
-    shap_values.index = ["shap_value"]
-    shap_values = shap_values.T
-    shap_values["abs"] = shap_values["shap_value"].abs()
-    shap_values = shap_values.sort_values("abs").drop(columns="abs")
-    top_features_frame = (
-        shap_values.tail(n_top_features)
-        .reset_index()
-        .rename(columns={"index": "Feature"})
+    shap_values = utils.ensure_polars(shap_values)
+    base_value = shap_values["E[f(x)]"][0]
+    contributions = shap_values.select(pl.exclude(["E[f(x)]", "f(x)"])).row(
+        0, named=True
     )
-    frames = []
-    if n_other_features > 0:
-        other_sum = shap_values.head(feature_count - n_top_features)["shap_value"].sum()
-        frames.append(
-            pd.DataFrame(
-                {
-                    "Feature": [f"Sum of {n_other_features} other features"],
-                    "shap_value": [other_sum],
-                }
-            )
-        )
-    frames.append(top_features_frame)
-    shap_values = pd.concat(frames).reset_index(drop=True)
+    # Sort ascending by |contribution|; the tail becomes the top features and
+    # everything before it is summed into the "other" bucket
+    ordered = sorted(contributions.items(), key=lambda kv: abs(kv[1]))
+    feature_count = len(ordered)
+    n_top_features = min(n_top_features, feature_count)
+    features: List[str] = []
+    values: List[float] = []
+    if feature_count - n_top_features > 0:
+        other_sum = sum(v for _, v in ordered[: feature_count - n_top_features])
+        features.append(f"Sum of {feature_count - n_top_features} other features")
+        values.append(other_sum)
+    for name, value in ordered[feature_count - n_top_features :]:
+        features.append(name)
+        values.append(value)
     fig = go.Figure(
         go.Waterfall(
             name="waterfall",
             base=base_value,
             orientation="h",
-            y=shap_values["Feature"],
-            x=shap_values["shap_value"],
+            y=features,
+            x=values,
             textposition="outside",
-            text=["{:+}".format(round(x, 3)) for x in shap_values["shap_value"]],
+            text=["{:+}".format(round(x, 3)) for x in values],
         )
     )
     return fig
