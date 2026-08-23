@@ -46,8 +46,8 @@ class Chart:
     def __init__(
         self,
         id: str,
+        data: pl.DataFrame,
         title: Optional[str] = None,
-        data: Optional[pl.DataFrame] = None,
         y_opts: Optional[List[str]] = None,
         x_opts: Optional[List[str]] = None,
         color_opts: Optional[List[Optional[str]]] = None,  # also for size, facet_col, facet_row
@@ -73,6 +73,8 @@ class Chart:
         map_hover_cols: Optional[List[str]] = None,
         map_hover_name: Optional[str] = None,
     ) -> None:
+        if data is None:
+            raise ValueError("Chart requires a DataFrame")
         self.id = id
         self.title = title or id
         self.data = data

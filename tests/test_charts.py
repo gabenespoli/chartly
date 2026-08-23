@@ -39,6 +39,11 @@ def test_sunburst_without_colormaps():
     assert chart.fig is not None
 
 
+def test_chart_requires_data():
+    with pytest.raises(ValueError):
+        Chart(id="nodata")
+
+
 def test_highlight_regions_skips_non_bar_charts():
     chart = make_chart("line")
     chart.update_figure()
