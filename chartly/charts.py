@@ -14,6 +14,7 @@ from dateutil.relativedelta import relativedelta
 from polars import col
 
 from chartly import graphs
+from chartly import utils
 
 BARMODES = {
     "grouped": "group",
@@ -29,16 +30,6 @@ DATE_GROUPING_MAP = {
     "Monthly": "1mo",
     "Quarterly": "1q",
     "Yearly": "1y",
-}
-
-# pd.Grouper does not understand the polars-style strings in DATE_GROUPING_MAP
-PANDAS_DATE_GROUPING_MAP = {
-    "Daily": "1D",
-    "Weekly": "1W",
-    "Bi-Weekly": "2W",
-    "Monthly": "1ME",
-    "Quarterly": "1QE",
-    "Yearly": "1YE",
 }
 
 # strftime formats for period labels; %G pairs ISO week numbers with their ISO
@@ -57,23 +48,6 @@ DATE_GROUPING_COL = "DateGrouping"
 
 # Legacy axis column names for which horizontal bars are disabled
 HORIZONTAL_BAR_BLOCKED_COLS = ("Date", "Month")
-
-
-def _pandas_date_grouping_column(
-    df: pd.DataFrame, date_col: str, date_grouping: Optional[str]
-) -> pd.Series:
-    """DateGrouping labels for a pandas column of timestamps."""
-    if date_grouping == "Bi-Weekly":
-        # Rows belong to the bucket starting at the odd ISO week of their pair
-        iso = df[date_col].dt.isocalendar()
-        year = iso["year"].astype(str)
-        bi_week = ((iso["week"] - 1) // 2 * 2 + 1).astype(str).str.zfill(2)
-        return year + "-W" + bi_week
-    if date_grouping == "Quarterly":
-        # %q is not supported by pandas Timestamp.strftime
-        quarter = (df[date_col].dt.month - 1) // 3 + 1
-        return df[date_col].dt.year.astype(str) + "-Q" + quarter.astype(str)
-    return df[date_col].dt.strftime(PERIOD_DATE_FORMATS.get(date_grouping, "%Y-%m-%d"))
 
 
 def _polars_date_grouping_column(
@@ -96,7 +70,7 @@ class Chart:
     def __init__(
         self,
         id: str,
-        data: pl.DataFrame,
+        data: Union[pd.DataFrame, pl.DataFrame],
         title: Optional[str] = None,
         y_opts: Optional[List[str]] = None,
         x_opts: Optional[List[str]] = None,
@@ -132,13 +106,15 @@ class Chart:
         # migrated to an explicit chart.render_options() call.
         self.id = id
         self.title = title or id
-        self.data = data
-        self.y_opts = y_opts or data.columns
-        self.x_opts = x_opts or data.columns
-        self.color_opts = color_opts or data.columns
+        # pandas input is converted once here; everything downstream is polars
+        self.data = utils.ensure_polars(data)
+        data = self.data
+        self.y_opts = y_opts or list(data.columns)
+        self.x_opts = x_opts or list(data.columns)
+        self.color_opts = color_opts or list(data.columns)
         if len(self.color_opts) > 0 and None not in self.color_opts:
             self.color_opts = [None] + self.color_opts
-        self.size_opts = size_opts or data.columns
+        self.size_opts = size_opts or list(data.columns)
 
         self.graph_types = ["bar", "line", "scatter", "donut", "sunburst"]
         if "lat" in data.columns and "lon" in data.columns:
@@ -193,36 +169,24 @@ class Chart:
         date_col: str = "Datetime",
         grp_col: Optional[str] = None,
         extra_grp_cols: Optional[List[str]] = None,
-    ) -> Union[pd.DataFrame, pl.DataFrame]:
+    ) -> pl.DataFrame:
         if date_grouping is None:
-            return df
+            return utils.ensure_polars(df)
+        df = utils.ensure_polars(df)
         extra_grp_cols = extra_grp_cols or []
-        if isinstance(df, pd.DataFrame):
-            df = df.set_index(date_col)
-            grp: List[Any] = [pd.Grouper(freq=PANDAS_DATE_GROUPING_MAP[date_grouping])]
-            if grp_col is not None:
-                grp = grp + [grp_col]
-            grp = grp + extra_grp_cols
-            df = df.groupby(grp)[AMOUNT_COL].sum().reset_index()
-            if date_col in df.columns:
-                # Bucket end timestamps carry the period label
-                df[DATE_GROUPING_COL] = _pandas_date_grouping_column(
-                    df, date_col, date_grouping
-                )
-        elif isinstance(df, pl.DataFrame):
-            all_grp_cols = [x for x in [grp_col] + extra_grp_cols if x is not None]
-            all_grp_cols = list(dict.fromkeys(all_grp_cols))
-            df = df.sort(*all_grp_cols, date_col)
-            df = df.group_by_dynamic(
-                date_col,
-                every=DATE_GROUPING_MAP[date_grouping],
-                group_by=all_grp_cols if all_grp_cols else None,
-            ).agg(col(AMOUNT_COL).sum())
-            df = df.with_columns(
-                _polars_date_grouping_column(date_col, date_grouping).alias(
-                    DATE_GROUPING_COL
-                )
+        all_grp_cols = [x for x in [grp_col] + extra_grp_cols if x is not None]
+        all_grp_cols = list(dict.fromkeys(all_grp_cols))
+        df = df.sort(*all_grp_cols, date_col)
+        df = df.group_by_dynamic(
+            date_col,
+            every=DATE_GROUPING_MAP[date_grouping],
+            group_by=all_grp_cols if all_grp_cols else None,
+        ).agg(col(AMOUNT_COL).sum())
+        df = df.with_columns(
+            _polars_date_grouping_column(date_col, date_grouping).alias(
+                DATE_GROUPING_COL
             )
+        )
         return df
 
     def get_date_grouping(
@@ -255,11 +219,6 @@ class Chart:
                     and DATE_GROUPING_COL in self.data.columns
                 ):
                     ref = sorted(self.data[DATE_GROUPING_COL].unique().to_list())[-1]
-                elif (
-                    isinstance(self.data, pd.DataFrame)
-                    and DATE_GROUPING_COL in self.data.columns
-                ):
-                    ref = sorted(self.data[DATE_GROUPING_COL].unique().tolist())[-1]
             if ref is not None:
                 default_min = self.get_period_offset(ref, default_min_num_periods)
         self.get_date_range_filter(default_min=default_min, default_max=default_max)
@@ -268,16 +227,11 @@ class Chart:
         if self.data is None or self.date_col is None:
             return
 
-        if isinstance(self.data, pl.DataFrame):
-            self.data = self.data.with_columns(
-                _polars_date_grouping_column(self.date_col, self.date_grouping).alias(
-                    DATE_GROUPING_COL
-                )
+        self.data = self.data.with_columns(
+            _polars_date_grouping_column(self.date_col, self.date_grouping).alias(
+                DATE_GROUPING_COL
             )
-        elif isinstance(self.data, pd.DataFrame):
-            self.data[DATE_GROUPING_COL] = _pandas_date_grouping_column(
-                self.data, self.date_col, self.date_grouping
-            )
+        )
 
     def get_last_complete_period(self, dt: date) -> Optional[str]:
         """Return the DateGrouping string for the most recent complete period
@@ -423,12 +377,7 @@ class Chart:
             return
         if DATE_GROUPING_COL not in self.data.columns:
             self.add_date_grouping_column()
-        if isinstance(self.data, pl.DataFrame):
-            options = sorted(self.data[DATE_GROUPING_COL].unique().to_list())
-        elif isinstance(self.data, pd.DataFrame):
-            options = sorted(self.data[DATE_GROUPING_COL].unique().tolist())
-        else:
-            return
+        options = sorted(self.data[DATE_GROUPING_COL].unique().to_list())
         if not options:
             return
         min_index = (
@@ -591,22 +540,17 @@ class Chart:
 
     @staticmethod
     def _filter_date_range(
-        df: Union[pd.DataFrame, pl.DataFrame],
+        df: pl.DataFrame,
         min_period: str,
         max_period: str,
-    ) -> Union[pd.DataFrame, pl.DataFrame]:
+    ) -> pl.DataFrame:
         """Keep rows whose DateGrouping label falls within the inclusive range.
         Label formats are zero-padded, so lexicographic order matches chronology.
         """
-        if isinstance(df, pl.DataFrame):
-            return df.filter(
-                (pl.col(DATE_GROUPING_COL) >= min_period)
-                & (pl.col(DATE_GROUPING_COL) <= max_period)
-            )
-        keep = (df[DATE_GROUPING_COL] >= min_period) & (
-            df[DATE_GROUPING_COL] <= max_period
+        return df.filter(
+            (pl.col(DATE_GROUPING_COL) >= min_period)
+            & (pl.col(DATE_GROUPING_COL) <= max_period)
         )
-        return df[keep]
 
     def update_figure(
         self,
@@ -732,9 +676,7 @@ class Chart:
             st.error("Figure is not updated. Call Chart.update_figure() first.")
 
     @staticmethod
-    def data_expander(
-        df: Union[pd.DataFrame, pl.DataFrame], title: str, **kwargs: Any
-    ) -> None:
+    def data_expander(df: pl.DataFrame, title: str, **kwargs: Any) -> None:
         with st.expander(f"{title} ({df.shape[0]} records)", **kwargs):
             st.dataframe(df)
 
@@ -760,14 +702,8 @@ class Chart:
         if sort_col is not None:
             if isinstance(data, pl.DataFrame) and sort_col in data.columns:
                 data = data.sort(sort_col, descending=sort_desc)
-            elif isinstance(data, pd.DataFrame) and sort_col in data.columns:
-                data = data.sort_values(sort_col, ascending=not sort_desc)
             if isinstance(data_chart, pl.DataFrame) and sort_col in data_chart.columns:
                 data_chart = data_chart.sort(sort_col, descending=sort_desc)
-            elif (
-                isinstance(data_chart, pd.DataFrame) and sort_col in data_chart.columns
-            ):
-                data_chart = data_chart.sort_values(sort_col, ascending=not sort_desc)
         if raw_data:
             self.data_expander(data, f"{self.title} data", **kwargs)
         if chart_data:

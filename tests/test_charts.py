@@ -11,13 +11,6 @@ from chartly import Chart
 warnings.filterwarnings("ignore")
 
 
-def make_pandas_chart_stub(df: pd.DataFrame) -> SimpleNamespace:
-    """Chart construction does not support pandas frames, so exercise the
-    pandas branches of instance methods through a stand-in carrying the
-    attributes those methods read."""
-    return SimpleNamespace(data=df, date_col="Datetime")
-
-
 def make_chart(graph_type: str) -> Chart:
     df = pl.DataFrame({"region": ["a", "b"], "amount": [1, 2]})
     return Chart(
@@ -52,6 +45,14 @@ def test_chart_requires_data():
         Chart(id="nodata")
 
 
+def test_chart_converts_pandas_input():
+    df = pd.DataFrame({"region": ["a", "b"], "amount": [1, 2]})
+    chart = Chart(id="pdx", data=df, y_opts=["amount"], x_opts=["region"])
+    assert isinstance(chart.data, pl.DataFrame)
+    chart.update_figure()
+    assert chart.fig is not None
+
+
 def test_highlight_regions_skips_non_bar_charts():
     chart = make_chart("line")
     chart.update_figure()
@@ -64,10 +65,12 @@ def test_highlight_regions_skips_non_bar_charts():
     assert not chart.fig.layout.shapes
 
 
-def test_group_by_date_pandas_monthly(date_df_pandas):
+def test_group_by_date_pandas_input_monthly(date_df_pandas):
+    """pandas input is converted at the boundary; polars grouping skips months
+    with no rows instead of emitting empty buckets."""
     out = Chart.group_by_date(date_df_pandas, "Monthly", date_col="Datetime")
-    # pd.Grouper emits a bucket per month in range, even when empty
-    assert list(out["DateGrouping"]) == ["2024-01", "2024-02", "2024-03", "2024-04"]
+    assert isinstance(out, pl.DataFrame)
+    assert list(out["DateGrouping"]) == ["2024-01", "2024-03", "2024-04"]
 
 
 def test_group_by_date_pandas_quarterly(date_df_pandas):
@@ -85,12 +88,12 @@ def test_group_by_date_pandas_daily(date_df_pandas):
     assert "2024-01-05" in list(out["DateGrouping"])
 
 
-def test_group_by_date_polars_quarterly_matches_pandas(date_df_pandas):
+def test_group_by_date_quarterly_matches_across_input_types(date_df_pandas):
     df_pl = pl.from_pandas(date_df_pandas)
     out_pl = Chart.group_by_date(df_pl, "Quarterly", date_col="Datetime")
     out_pd = Chart.group_by_date(date_df_pandas, "Quarterly", date_col="Datetime")
     assert sorted(out_pl["DateGrouping"].to_list()) == sorted(
-        out_pd["DateGrouping"].tolist()
+        out_pd["DateGrouping"].to_list()
     )
 
 
@@ -104,13 +107,6 @@ def iso_boundary_df():
             "Amount": [1, 2],
         }
     )
-
-
-def test_weekly_labels_use_iso_year_pandas(iso_boundary_df):
-    chart = make_pandas_chart_stub(iso_boundary_df)
-    chart.date_grouping = "Weekly"
-    Chart.add_date_grouping_column(chart)
-    assert list(chart.data["DateGrouping"]) == ["2026-W53", "2026-W53"]
 
 
 def test_weekly_labels_use_iso_year_polars(iso_boundary_df):
@@ -128,35 +124,30 @@ def test_biweekly_labels_use_iso_year_polars(iso_boundary_df):
     assert list(chart.data["DateGrouping"]) == ["2026-W53", "2026-W53"]
 
 
-def test_biweekly_labels_match_between_engines():
-    df_pd = pd.DataFrame(
+def test_biweekly_even_week_joins_previous_bucket():
+    df = pl.DataFrame(
         {
             "Datetime": pd.to_datetime(["2026-12-22", "2026-12-30"]),
             "Amount": [1, 2],
         }
     )
-    stub = make_pandas_chart_stub(df_pd)
-    stub.date_grouping = "Bi-Weekly"
-    Chart.add_date_grouping_column(stub)
-    df_pl = pl.from_pandas(df_pd)
-    chart = Chart(id="bwx", data=df_pl, date_col="Datetime")
+    chart = Chart(id="bwx", data=df, date_col="Datetime")
     chart.date_grouping = "Bi-Weekly"
     chart.add_date_grouping_column()
     # Week 52 is even, so it belongs to the bucket starting at odd week 51
-    assert list(stub.data["DateGrouping"]) == ["2026-W51", "2026-W53"]
-    assert list(stub.data["DateGrouping"]) == list(chart.data["DateGrouping"])
+    assert list(chart.data["DateGrouping"]) == ["2026-W51", "2026-W53"]
 
 
-def test_add_date_grouping_column_quarterly_pandas(iso_boundary_df):
-    df = pd.DataFrame(
+def test_add_date_grouping_column_quarterly():
+    df = pl.DataFrame(
         {
             "Datetime": pd.to_datetime(["2024-02-15", "2024-05-20"]),
             "Amount": [1, 2],
         }
     )
-    chart = make_pandas_chart_stub(df)
+    chart = Chart(id="q", data=df, date_col="Datetime")
     chart.date_grouping = "Quarterly"
-    Chart.add_date_grouping_column(chart)
+    chart.add_date_grouping_column()
     assert list(chart.data["DateGrouping"]) == ["2024-Q1", "2024-Q2"]
 
 
@@ -166,20 +157,12 @@ def test_get_last_complete_period_weekly_format():
     assert chart.get_last_complete_period(date(2027, 1, 1)) == "2026-W52"
 
 
-@pytest.mark.parametrize("frame", ["pandas", "polars"])
-def test_filter_date_range_inclusive(frame):
-    labels = ["2024-01", "2024-02", "2024-03"]
-    if frame == "pandas":
-        df = pd.DataFrame({"DateGrouping": labels, "v": [1, 2, 3]})
-    else:
-        df = pl.DataFrame({"DateGrouping": labels, "v": [1, 2, 3]})
-    out = Chart._filter_date_range(df, "2024-01", "2024-02")
-    got = (
-        out["DateGrouping"].tolist()
-        if frame == "pandas"
-        else out["DateGrouping"].to_list()
+def test_filter_date_range_inclusive():
+    df = pl.DataFrame(
+        {"DateGrouping": ["2024-01", "2024-02", "2024-03"], "v": [1, 2, 3]}
     )
-    assert got == ["2024-01", "2024-02"]
+    out = Chart._filter_date_range(df, "2024-01", "2024-02")
+    assert out["DateGrouping"].to_list() == ["2024-01", "2024-02"]
 
 
 def test_highlight_monthly_regions_annotates_values_and_diffs():
