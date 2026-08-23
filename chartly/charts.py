@@ -160,8 +160,8 @@ class Chart:
                     df["DateGrouping"] = df[date_col].dt.strftime("%Y-%m-%d")
                 else:
                     # Weekly and Bi-Weekly buckets are labeled by ISO week of the
-                    # bucket end date
-                    df["DateGrouping"] = df[date_col].dt.strftime("%Y-W%V")
+                    # bucket end date; %G pairs the ISO week number with its ISO year
+                    df["DateGrouping"] = df[date_col].dt.strftime("%G-W%V")
         elif isinstance(df, pl.DataFrame):
             all_grp_cols = [x for x in [grp_col] + extra_grp_cols if x is not None]
             all_grp_cols = list(dict.fromkeys(all_grp_cols))
@@ -173,7 +173,7 @@ class Chart:
             ).agg(col("Amount").sum())
             if date_grouping == "Bi-Weekly":
                 week_num = pl.col(date_col).dt.week()
-                year = pl.col(date_col).dt.year().cast(pl.Utf8)
+                year = pl.col(date_col).dt.iso_year().cast(pl.Utf8)
                 bi_week = ((week_num - 1) // 2 * 2 + 1).cast(pl.Utf8).str.zfill(2)
                 df = df.with_columns((year + "-W" + bi_week).alias("DateGrouping"))
             elif date_grouping == "Monthly":
@@ -185,7 +185,7 @@ class Chart:
             elif date_grouping == "Yearly":
                 df = df.with_columns(pl.col(date_col).dt.year().cast(pl.Utf8).alias("DateGrouping"))
             elif date_grouping == "Weekly":
-                df = df.with_columns(pl.col(date_col).dt.strftime("%Y-W%V").alias("DateGrouping"))
+                df = df.with_columns(pl.col(date_col).dt.strftime("%G-W%V").alias("DateGrouping"))
             else:
                 df = df.with_columns(pl.col(date_col).dt.strftime("%Y-%m-%d").alias("DateGrouping"))
         return df
@@ -232,7 +232,7 @@ class Chart:
         elif self.date_grouping == "Daily":
             fmt = "%Y-%m-%d"
         elif self.date_grouping == "Weekly":
-            fmt = "%Y-W%V"
+            fmt = "%G-W%V"
         elif self.date_grouping == "Bi-Weekly":
             fmt = "%Y-W%V-B1"
         elif self.date_grouping == "Monthly":
@@ -249,7 +249,7 @@ class Chart:
         if isinstance(self.data, pl.DataFrame):
             if self.date_grouping == "Bi-Weekly":
                 week_num = pl.col(self.date_col).dt.week()
-                year = pl.col(self.date_col).dt.year().cast(pl.Utf8)
+                year = pl.col(self.date_col).dt.iso_year().cast(pl.Utf8)
                 bi_week = ((week_num - 1) // 2 * 2 + 1).cast(pl.Utf8).str.zfill(2)
                 self.data = self.data.with_columns(
                     (year + "-W" + bi_week).alias("DateGrouping")
@@ -295,7 +295,7 @@ class Chart:
             last_monday = dt - timedelta(days=days_since_monday)
             # Last complete week ended the Sunday before last_monday
             last_day_prev_week = last_monday - timedelta(days=1)
-            return last_day_prev_week.strftime("%Y-W%V")
+            return last_day_prev_week.strftime("%G-W%V")
 
         elif self.date_grouping == "Bi-Weekly":
             # Current ISO week

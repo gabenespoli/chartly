@@ -106,6 +106,28 @@ def iso_boundary_df():
     )
 
 
+def test_weekly_labels_use_iso_year_pandas(iso_boundary_df):
+    chart = make_pandas_chart_stub(iso_boundary_df)
+    chart.date_grouping = "Weekly"
+    Chart.add_date_grouping_column(chart)
+    assert list(chart.data["DateGrouping"]) == ["2026-W53", "2026-W53"]
+
+
+def test_weekly_labels_use_iso_year_polars(iso_boundary_df):
+    chart = Chart(id="w", data=pl.from_pandas(iso_boundary_df), date_col="Datetime")
+    chart.date_grouping = "Weekly"
+    chart.add_date_grouping_column()
+    assert list(chart.data["DateGrouping"]) == ["2026-W53", "2026-W53"]
+
+
+def test_biweekly_labels_use_iso_year_polars(iso_boundary_df):
+    chart = Chart(id="bw", data=pl.from_pandas(iso_boundary_df), date_col="Datetime")
+    chart.date_grouping = "Bi-Weekly"
+    chart.add_date_grouping_column()
+    # ISO week 53 is odd, so it forms its own bucket labeled with its ISO year
+    assert list(chart.data["DateGrouping"]) == ["2026-W53", "2026-W53"]
+
+
 def test_add_date_grouping_column_quarterly_pandas(iso_boundary_df):
     df = pd.DataFrame(
         {
@@ -119,3 +141,7 @@ def test_add_date_grouping_column_quarterly_pandas(iso_boundary_df):
     assert list(chart.data["DateGrouping"]) == ["2024-Q1", "2024-Q2"]
 
 
+def test_get_last_complete_period_weekly_format():
+    chart = Chart(id="p", data=pl.DataFrame({"a": [1]}))
+    chart.date_grouping = "Weekly"
+    assert chart.get_last_complete_period(date(2027, 1, 1)) == "2026-W52"
