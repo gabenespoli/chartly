@@ -85,9 +85,14 @@ def test_waterfall_all_features_requested_adds_no_other_bucket():
 
 
 def make_grouped_stacked_df() -> pd.DataFrame:
-    combos = [(m, r, s) for m in ["jan", "feb"] for r in ["east", "west"] for s in ["a", "b"]]
+    combos = [
+        (m, r, s) for m in ["jan", "feb"] for r in ["east", "west"] for s in ["a", "b"]
+    ]
     return pd.DataFrame(
-        [{"month": m, "region": r, "segment": s, "val": (i * 3) % 10} for i, (m, r, s) in enumerate(combos)]
+        [
+            {"month": m, "region": r, "segment": s, "val": (i * 3) % 10}
+            for i, (m, r, s) in enumerate(combos)
+        ]
     )
 
 
@@ -104,8 +109,7 @@ def test_grouped_stacked_bar_characterization():
     assert str(fig.layout.barmode) == "stack"
     assert list(fig.layout.xaxis.ticktext) == ["feb", "jan"]
     traces = [
-        (t.name, t.showlegend, list(t.x), list(t.y), t.marker.color)
-        for t in fig.data
+        (t.name, t.showlegend, list(t.x), list(t.y), t.marker.color) for t in fig.data
     ]
     assert traces == [
         ("a", True, [-0.2, 0.8], [2, 0], "#636EFA"),
@@ -138,4 +142,10 @@ def test_sankey_builds_links_and_drops_zero_flows():
         for s, t, v in zip(link.source, link.target, link.value)
     }
     # b -> x has zero rows and must be dropped
-    assert triples == {("Total", "a", 2), ("Total", "b", 1), ("a", "x", 1), ("a", "y", 1), ("b", "y", 1)}
+    assert triples == {
+        ("Total", "a", 2),
+        ("Total", "b", 1),
+        ("a", "x", 1),
+        ("a", "y", 1),
+        ("b", "y", 1),
+    }

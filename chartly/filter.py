@@ -142,7 +142,9 @@ def hash_func(obj: Filter) -> str:
     return obj.filter_sql()
 
 
-def combine_filters(filter1: Optional[Filter], filter2: Optional[Filter]) -> Optional[Filter]:
+def combine_filters(
+    filter1: Optional[Filter], filter2: Optional[Filter]
+) -> Optional[Filter]:
     """Combine two filters into a single filter.
     If same key exists in both, prefer the first filter, unless it is empty then use the
     second filter. Metadata (col_names, filter_types, bypass_options) follows whichever
@@ -159,17 +161,9 @@ def combine_filters(filter1: Optional[Filter], filter2: Optional[Filter]) -> Opt
     filter_types = dict()
     bypass_options = dict()
     for label in list(set(list(f1.keys()) + list(f2.keys()))):
-        if (
-            label in f1.keys()
-            and f1.get(label) is not None
-            and f1.get(label) != []
-        ):
+        if label in f1.keys() and f1.get(label) is not None and f1.get(label) != []:
             source = filter1
-        elif (
-            label in f2.keys()
-            and f2.get(label) is not None
-            and f2.get(label) != []
-        ):
+        elif label in f2.keys() and f2.get(label) is not None and f2.get(label) != []:
             source = filter2
         else:
             continue

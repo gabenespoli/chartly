@@ -3,7 +3,8 @@ import warnings
 import polars as pl
 import streamlit as st
 
-from chartly import Filter, filter_data
+from chartly import Filter
+from chartly import filter_data
 from chartly.filter import combine_filters
 
 warnings.filterwarnings("ignore")
@@ -56,9 +57,7 @@ def test_combine_filters_merges_metadata(monkeypatch):
     f1 = Filter(id="a")
     f1.selectbox(label="Region", options=["x", "y"], col_name="r")
     f2 = Filter(id="b")
-    f2.selectbox(
-        label="Amount", options=[0, 1, 2], col_name="amt", filter_type="gte"
-    )
+    f2.selectbox(label="Amount", options=[0, 1, 2], col_name="amt", filter_type="gte")
     combined = combine_filters(f1, f2)
     assert combined.filters == {**f1.filters, **f2.filters}
     assert combined.col_names == {"Region": "r", "Amount": "amt"}
@@ -88,10 +87,7 @@ def test_filter_sql_handles_scalar_and_list_values():
     f = make_filter()
     f.selectbox(label="Region", options=["east", "west"])
     f.multiselect(label="Product", options=["p1", "p2"], default=["p1"])
-    assert (
-        f.filter_sql()
-        == "WHERE Region in ('east') and Product in ('p1')"
-    )
+    assert f.filter_sql() == "WHERE Region in ('east') and Product in ('p1')"
 
 
 def test_filter_sql_skips_empty_multiselect():

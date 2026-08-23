@@ -174,16 +174,19 @@ def test_filter_date_range_inclusive(frame):
     else:
         df = pl.DataFrame({"DateGrouping": labels, "v": [1, 2, 3]})
     out = Chart._filter_date_range(df, "2024-01", "2024-02")
-    got = out["DateGrouping"].tolist() if frame == "pandas" else out["DateGrouping"].to_list()
+    got = (
+        out["DateGrouping"].tolist()
+        if frame == "pandas"
+        else out["DateGrouping"].to_list()
+    )
     assert got == ["2024-01", "2024-02"]
 
 
 def test_highlight_monthly_regions_annotates_values_and_diffs():
     go = pytest.importorskip("plotly.graph_objects")
-    months = (
-        [date(2023, m, 15) for m in range(7, 13)]
-        + [date(2024, m, 15) for m in range(1, 6)]
-    )
+    months = [date(2023, m, 15) for m in range(7, 13)] + [
+        date(2024, m, 15) for m in range(1, 6)
+    ]
     df = pl.DataFrame({"Month": months, "amount": [100.0] * len(months)})
     stub = SimpleNamespace(graph_type="bar", data=df, y="amount", fig=go.Figure())
     Chart.highlight_monthly_regions(

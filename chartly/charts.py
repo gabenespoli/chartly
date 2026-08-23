@@ -100,7 +100,9 @@ class Chart:
         title: Optional[str] = None,
         y_opts: Optional[List[str]] = None,
         x_opts: Optional[List[str]] = None,
-        color_opts: Optional[List[Optional[str]]] = None,  # also for size, facet_col, facet_row
+        color_opts: Optional[
+            List[Optional[str]]
+        ] = None,  # also for size, facet_col, facet_row
         size_opts: Optional[List[str]] = None,
         default_y: Optional[str] = None,
         default_x: Optional[str] = None,
@@ -217,7 +219,9 @@ class Chart:
                 group_by=all_grp_cols if all_grp_cols else None,
             ).agg(col(AMOUNT_COL).sum())
             df = df.with_columns(
-                _polars_date_grouping_column(date_col, date_grouping).alias(DATE_GROUPING_COL)
+                _polars_date_grouping_column(date_col, date_grouping).alias(
+                    DATE_GROUPING_COL
+                )
             )
         return df
 
@@ -246,9 +250,15 @@ class Chart:
             ref = default_max
             if ref is None:
                 # Use latest available value from data
-                if isinstance(self.data, pl.DataFrame) and DATE_GROUPING_COL in self.data.columns:
+                if (
+                    isinstance(self.data, pl.DataFrame)
+                    and DATE_GROUPING_COL in self.data.columns
+                ):
                     ref = sorted(self.data[DATE_GROUPING_COL].unique().to_list())[-1]
-                elif isinstance(self.data, pd.DataFrame) and DATE_GROUPING_COL in self.data.columns:
+                elif (
+                    isinstance(self.data, pd.DataFrame)
+                    and DATE_GROUPING_COL in self.data.columns
+                ):
                     ref = sorted(self.data[DATE_GROUPING_COL].unique().tolist())[-1]
             if ref is not None:
                 default_min = self.get_period_offset(ref, default_min_num_periods)
@@ -260,9 +270,9 @@ class Chart:
 
         if isinstance(self.data, pl.DataFrame):
             self.data = self.data.with_columns(
-                _polars_date_grouping_column(
-                    self.date_col, self.date_grouping
-                ).alias(DATE_GROUPING_COL)
+                _polars_date_grouping_column(self.date_col, self.date_grouping).alias(
+                    DATE_GROUPING_COL
+                )
             )
         elif isinstance(self.data, pd.DataFrame):
             self.data[DATE_GROUPING_COL] = _pandas_date_grouping_column(
@@ -299,7 +309,7 @@ class Chart:
             w = dt.isocalendar()[1]
             year = dt.isocalendar()[0]
             # Current bi-weekly bucket
-            b = ((w - 1) // 2 * 2 + 1)
+            b = (w - 1) // 2 * 2 + 1
             # If we're still in the bucket's 2-week span (week b or b+1),
             # the current bucket isn't complete yet, use previous bucket
             if w <= b + 1:
@@ -309,7 +319,7 @@ class Chart:
                     # Get last ISO week of previous year
                     last_day_prev_year = date(year, 12, 28)
                     last_week = last_day_prev_year.isocalendar()[1]
-                    b = ((last_week - 1) // 2 * 2 + 1)
+                    b = (last_week - 1) // 2 * 2 + 1
             return f"{year}-W{b:02d}"
 
         elif self.date_grouping == "Monthly":
@@ -357,7 +367,9 @@ class Chart:
             # Get the Monday of that week, then subtract num_periods weeks
             jan4 = date(year, 1, 4)  # Jan 4 is always in ISO week 1
             monday_w1 = jan4 - timedelta(days=jan4.weekday())
-            target_monday = monday_w1 + timedelta(weeks=week - 1) - timedelta(weeks=num_periods)
+            target_monday = (
+                monday_w1 + timedelta(weeks=week - 1) - timedelta(weeks=num_periods)
+            )
             return target_monday.strftime("%Y-W%V")
 
         elif self.date_grouping == "Bi-Weekly":
@@ -365,10 +377,12 @@ class Chart:
             year, week = int(period_str[:4]), int(period_str.split("W")[1])
             jan4 = date(year, 1, 4)
             monday_w1 = jan4 - timedelta(days=jan4.weekday())
-            target_monday = monday_w1 + timedelta(weeks=week - 1) - timedelta(weeks=num_periods * 2)
+            target_monday = (
+                monday_w1 + timedelta(weeks=week - 1) - timedelta(weeks=num_periods * 2)
+            )
             # Recompute bi-weekly bucket for the target date
             iso_year, iso_week, _ = target_monday.isocalendar()
-            b = ((iso_week - 1) // 2 * 2 + 1)
+            b = (iso_week - 1) // 2 * 2 + 1
             return f"{iso_year}-W{b:02d}"
 
         elif self.date_grouping == "Monthly":
@@ -417,7 +431,9 @@ class Chart:
             return
         if not options:
             return
-        min_index = options.index(default_min) if default_min and default_min in options else 0
+        min_index = (
+            options.index(default_min) if default_min and default_min in options else 0
+        )
         cols = st.columns(2)
         self.min_date_grouping = cols[0].selectbox(
             label="Min Date",
@@ -426,7 +442,11 @@ class Chart:
             key=f"{self.id}_min_date_grouping",
         )
         options_desc = list(reversed(options))
-        max_index = options_desc.index(default_max) if default_max and default_max in options_desc else 0
+        max_index = (
+            options_desc.index(default_max)
+            if default_max and default_max in options_desc
+            else 0
+        )
         self.max_date_grouping = cols[1].selectbox(
             label="Max Date",
             options=options_desc,
@@ -465,9 +485,15 @@ class Chart:
             key=f"{self.id}_color",
             disabled=self.graph_type == "donut",
         )
-        _is_grouped_stacked = st.session_state.get(f"{self.id}_barmode") == "grouped+stacked"
+        _is_grouped_stacked = (
+            st.session_state.get(f"{self.id}_barmode") == "grouped+stacked"
+        )
         facet_opts = [None] + self.color_opts
-        self.facet_col_index = 0 if self.default_facet_col is None else facet_opts.index(self.default_facet_col)
+        self.facet_col_index = (
+            0
+            if self.default_facet_col is None
+            else facet_opts.index(self.default_facet_col)
+        )
         self.facet_col = pp.selectbox(
             label="Column Split",
             options=facet_opts,
@@ -476,7 +502,11 @@ class Chart:
             disabled=_is_grouped_stacked,
         )
         facet_row_opts = [None] + self.color_opts
-        self.facet_row_index = 0 if self.default_facet_row is None else facet_row_opts.index(self.default_facet_row)
+        self.facet_row_index = (
+            0
+            if self.default_facet_row is None
+            else facet_row_opts.index(self.default_facet_row)
+        )
         self.facet_row = pp.selectbox(
             label="Row Split",
             options=facet_row_opts,
@@ -485,7 +515,9 @@ class Chart:
             disabled=_is_grouped_stacked,
         )
         size_opts = [None] + self.size_opts
-        self.size_index = 0 if self.default_size is None else size_opts.index(self.default_size)
+        self.size_index = (
+            0 if self.default_size is None else size_opts.index(self.default_size)
+        )
         self.size = pp.selectbox(
             label="Size",
             options=size_opts,
@@ -502,7 +534,11 @@ class Chart:
             disabled=self.graph_type != "bar",
         )
         bar_group_opts = [None] + self.color_opts
-        self.bar_group_index = 0 if self.default_bar_group is None else bar_group_opts.index(self.default_bar_group)
+        self.bar_group_index = (
+            0
+            if self.default_bar_group is None
+            else bar_group_opts.index(self.default_bar_group)
+        )
         self.bar_group = pp.selectbox(
             label="Bar Group",
             options=bar_group_opts,
@@ -511,7 +547,11 @@ class Chart:
             disabled=self.barmode != "grouped+stacked" or self.graph_type != "bar",
         )
         marginal_opts = [None, "box", "histogram", "rug", "violin"]
-        self.marginal_index = 0 if self.default_marginal is None else marginal_opts.index(self.default_marginal)
+        self.marginal_index = (
+            0
+            if self.default_marginal is None
+            else marginal_opts.index(self.default_marginal)
+        )
         self.marginal = pp.selectbox(
             label="Marginal Plots",
             options=marginal_opts,
@@ -539,8 +579,7 @@ class Chart:
             label="Horizontal bars",
             value=self.default_orientation_h,
             key=f"{self.id}_orientation",
-            disabled=self.graph_type != "bar"
-            or self.x in HORIZONTAL_BAR_BLOCKED_COLS,
+            disabled=self.graph_type != "bar" or self.x in HORIZONTAL_BAR_BLOCKED_COLS,
         )
         self.orientation = "h" if self.orientation_h else "v"
         self.sort_legend_by_value = pp.checkbox(
@@ -581,7 +620,11 @@ class Chart:
             date_grouping=self.date_grouping,
             date_col=self.date_col,
             grp_col=self.color,
-            extra_grp_cols=[self.bar_group] if self.bar_group and self.barmode == "grouped+stacked" else None,
+            extra_grp_cols=(
+                [self.bar_group]
+                if self.bar_group and self.barmode == "grouped+stacked"
+                else None
+            ),
         )
         if (
             self.date_grouping
@@ -689,7 +732,9 @@ class Chart:
             st.error("Figure is not updated. Call Chart.update_figure() first.")
 
     @staticmethod
-    def data_expander(df: Union[pd.DataFrame, pl.DataFrame], title: str, **kwargs: Any) -> None:
+    def data_expander(
+        df: Union[pd.DataFrame, pl.DataFrame], title: str, **kwargs: Any
+    ) -> None:
         with st.expander(f"{title} ({df.shape[0]} records)", **kwargs):
             st.dataframe(df)
 
@@ -719,7 +764,9 @@ class Chart:
                 data = data.sort_values(sort_col, ascending=not sort_desc)
             if isinstance(data_chart, pl.DataFrame) and sort_col in data_chart.columns:
                 data_chart = data_chart.sort(sort_col, descending=sort_desc)
-            elif isinstance(data_chart, pd.DataFrame) and sort_col in data_chart.columns:
+            elif (
+                isinstance(data_chart, pd.DataFrame) and sort_col in data_chart.columns
+            ):
                 data_chart = data_chart.sort_values(sort_col, ascending=not sort_desc)
         if raw_data:
             self.data_expander(data, f"{self.title} data", **kwargs)

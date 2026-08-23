@@ -1,3 +1,4 @@
+import warnings
 from decimal import Decimal
 from math import floor
 from math import log10
@@ -6,7 +7,6 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Union
-import warnings
 
 import pandas as pd
 import plotly.express as px
@@ -145,11 +145,15 @@ def _grouped_stacked_bar(
     if sort_legend_by_value:
         if bar_group_col == stack_col:
             # When same column, just sort by value descending
-            sorted_combinations = [(val, val) for val in stack_totals.sort_values(ascending=False).index]
+            sorted_combinations = [
+                (val, val) for val in stack_totals.sort_values(ascending=False).index
+            ]
         else:
             # Sort by bar_group first (ascending), then by value descending
             df_sort = stack_totals.reset_index()
-            df_sort = df_sort.sort_values(by=[bar_group_col, value_col], ascending=[True, False])
+            df_sort = df_sort.sort_values(
+                by=[bar_group_col, value_col], ascending=[True, False]
+            )
             sorted_combinations = list(zip(df_sort[bar_group_col], df_sort[stack_col]))
 
         # Create legend names with values
@@ -167,12 +171,11 @@ def _grouped_stacked_bar(
         # Default: sort by stack_col only
         if bar_group_col == stack_col:
             sorted_combinations = [(val, val) for val in sorted(stack_totals.index)]
-            legend_name_map = {
-                (val, val): str(val)
-                for val in stack_totals.index
-            }
+            legend_name_map = {(val, val): str(val) for val in stack_totals.index}
         else:
-            sorted_combinations = sorted(stack_totals.index.tolist(), key=lambda x: x[1])
+            sorted_combinations = sorted(
+                stack_totals.index.tolist(), key=lambda x: x[1]
+            )
             legend_name_map = {
                 (grp_val, stack_val): str(stack_val)
                 for grp_val, stack_val in stack_totals.index
@@ -214,24 +217,28 @@ def _grouped_stacked_bar(
         x_vals = [x_pos_map[x] + bar_group_offsets[grp_val] for x in x_vals_raw]
 
         if orientation == "h":
-            fig.add_trace(go.Bar(
-                y=x_vals_raw,
-                x=y_vals,
-                name=name,
-                legendgroup=str(stack_val),
-                showlegend=show_legend,
-                marker_color=color_map.get(stack_val),
-                orientation="h",
-            ))
+            fig.add_trace(
+                go.Bar(
+                    y=x_vals_raw,
+                    x=y_vals,
+                    name=name,
+                    legendgroup=str(stack_val),
+                    showlegend=show_legend,
+                    marker_color=color_map.get(stack_val),
+                    orientation="h",
+                )
+            )
         else:
-            fig.add_trace(go.Bar(
-                x=x_vals,
-                y=y_vals,
-                name=name,
-                legendgroup=str(stack_val),
-                showlegend=show_legend,
-                marker_color=color_map.get(stack_val),
-            ))
+            fig.add_trace(
+                go.Bar(
+                    x=x_vals,
+                    y=y_vals,
+                    name=name,
+                    legendgroup=str(stack_val),
+                    showlegend=show_legend,
+                    marker_color=color_map.get(stack_val),
+                )
+            )
 
     # Calculate total for each (x, bar_group) and add labels at top of each bar
     if text_auto:
@@ -412,7 +419,12 @@ def graph(
         else:
             df = df.sort_values(by=[group_col, x_col])
         fig = px.scatter(
-            df, **{k: v for k, v in kwargs.items() if k not in ["barmode", "text_auto", "bar_group"]}
+            df,
+            **{
+                k: v
+                for k, v in kwargs.items()
+                if k not in ["barmode", "text_auto", "bar_group"]
+            },
         )
     elif kwargs.get("bar_group") and color_col:
         # Grouped + Stacked: use go.Bar with offsetgroup for grouping and barmode=stack

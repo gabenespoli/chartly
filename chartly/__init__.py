@@ -2,11 +2,11 @@
 .. include:: ../README.md
 """
 
+from chartly import filter
+from chartly import graphs
 from chartly.charts import Chart
 from chartly.filter import Filter
 from chartly.filter import filter_data
-from chartly import filter
-from chartly import graphs
 
 __all__ = [
     "Chart",  # class
