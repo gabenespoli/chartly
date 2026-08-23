@@ -41,6 +41,48 @@ PANDAS_DATE_GROUPING_MAP = {
     "Yearly": "1YE",
 }
 
+# strftime formats for period labels; %G pairs ISO week numbers with their ISO
+# year. Bi-Weekly and Quarterly are computed manually (see helpers below).
+PERIOD_DATE_FORMATS = {
+    "Daily": "%Y-%m-%d",
+    "Weekly": "%G-W%V",
+    "Monthly": "%Y-%m",
+    "Yearly": "%Y",
+}
+
+
+def _pandas_date_grouping_column(
+    df: pd.DataFrame, date_col: str, date_grouping: Optional[str]
+) -> pd.Series:
+    """DateGrouping labels for a pandas column of timestamps."""
+    if date_grouping == "Bi-Weekly":
+        # Rows belong to the bucket starting at the odd ISO week of their pair
+        iso = df[date_col].dt.isocalendar()
+        year = iso["year"].astype(str)
+        bi_week = ((iso["week"] - 1) // 2 * 2 + 1).astype(str).str.zfill(2)
+        return year + "-W" + bi_week
+    if date_grouping == "Quarterly":
+        # %q is not supported by pandas Timestamp.strftime
+        quarter = (df[date_col].dt.month - 1) // 3 + 1
+        return df[date_col].dt.year.astype(str) + "-Q" + quarter.astype(str)
+    return df[date_col].dt.strftime(PERIOD_DATE_FORMATS.get(date_grouping, "%Y-%m-%d"))
+
+
+def _polars_date_grouping_column(
+    date_col: str, date_grouping: Optional[str]
+) -> "pl.Expr":
+    """DateGrouping label expression for a polars date/datetime column."""
+    if date_grouping == "Bi-Weekly":
+        week_num = col(date_col).dt.week()
+        year = col(date_col).dt.iso_year().cast(pl.Utf8)
+        bi_week = ((week_num - 1) // 2 * 2 + 1).cast(pl.Utf8).str.zfill(2)
+        return year + "-W" + bi_week
+    if date_grouping == "Quarterly":
+        quarter = ((col(date_col).dt.month() - 1) // 3 + 1).cast(pl.Utf8)
+        year = col(date_col).dt.year().cast(pl.Utf8)
+        return year + "-Q" + quarter
+    return col(date_col).dt.strftime(PERIOD_DATE_FORMATS.get(date_grouping, "%Y-%m-%d"))
+
 
 class Chart:
     def __init__(
@@ -148,20 +190,10 @@ class Chart:
             grp = grp + extra_grp_cols
             df = df.groupby(grp)["Amount"].sum().reset_index()
             if date_col in df.columns:
-                if date_grouping == "Quarterly":
-                    quarter = (df[date_col].dt.month - 1) // 3 + 1
-                    year = df[date_col].dt.year.astype(str)
-                    df["DateGrouping"] = year + "-Q" + quarter.astype(str)
-                elif date_grouping == "Yearly":
-                    df["DateGrouping"] = df[date_col].dt.strftime("%Y")
-                elif date_grouping == "Monthly":
-                    df["DateGrouping"] = df[date_col].dt.strftime("%Y-%m")
-                elif date_grouping == "Daily":
-                    df["DateGrouping"] = df[date_col].dt.strftime("%Y-%m-%d")
-                else:
-                    # Weekly and Bi-Weekly buckets are labeled by ISO week of the
-                    # bucket end date; %G pairs the ISO week number with its ISO year
-                    df["DateGrouping"] = df[date_col].dt.strftime("%G-W%V")
+                # Bucket end timestamps carry the period label
+                df["DateGrouping"] = _pandas_date_grouping_column(
+                    df, date_col, date_grouping
+                )
         elif isinstance(df, pl.DataFrame):
             all_grp_cols = [x for x in [grp_col] + extra_grp_cols if x is not None]
             all_grp_cols = list(dict.fromkeys(all_grp_cols))
@@ -171,23 +203,9 @@ class Chart:
                 every=DATE_GROUPING_MAP[date_grouping],
                 group_by=all_grp_cols if all_grp_cols else None,
             ).agg(col("Amount").sum())
-            if date_grouping == "Bi-Weekly":
-                week_num = pl.col(date_col).dt.week()
-                year = pl.col(date_col).dt.iso_year().cast(pl.Utf8)
-                bi_week = ((week_num - 1) // 2 * 2 + 1).cast(pl.Utf8).str.zfill(2)
-                df = df.with_columns((year + "-W" + bi_week).alias("DateGrouping"))
-            elif date_grouping == "Monthly":
-                df = df.with_columns(pl.col(date_col).dt.strftime("%Y-%m").alias("DateGrouping"))
-            elif date_grouping == "Quarterly":
-                quarter = ((pl.col(date_col).dt.month() - 1) // 3 + 1).cast(pl.Utf8)
-                year = pl.col(date_col).dt.year().cast(pl.Utf8)
-                df = df.with_columns((year + "-Q" + quarter).alias("DateGrouping"))
-            elif date_grouping == "Yearly":
-                df = df.with_columns(pl.col(date_col).dt.year().cast(pl.Utf8).alias("DateGrouping"))
-            elif date_grouping == "Weekly":
-                df = df.with_columns(pl.col(date_col).dt.strftime("%G-W%V").alias("DateGrouping"))
-            else:
-                df = df.with_columns(pl.col(date_col).dt.strftime("%Y-%m-%d").alias("DateGrouping"))
+            df = df.with_columns(
+                _polars_date_grouping_column(date_col, date_grouping).alias("DateGrouping")
+            )
         return df
 
     def get_date_grouping(
@@ -227,58 +245,16 @@ class Chart:
         if self.data is None or self.date_col is None:
             return
 
-        if self.date_grouping is None:
-            fmt = "%Y-%m-%d"
-        elif self.date_grouping == "Daily":
-            fmt = "%Y-%m-%d"
-        elif self.date_grouping == "Weekly":
-            fmt = "%G-W%V"
-        elif self.date_grouping == "Bi-Weekly":
-            # Bi-weekly buckets are computed manually below so both engines
-            # label rows by the odd ISO week that starts their 2-week bucket;
-            # fmt stays unused
-            fmt = None
-        elif self.date_grouping == "Monthly":
-            fmt = "%Y-%m"
-        elif self.date_grouping == "Quarterly":
-            # %q is not supported by pandas Timestamp.strftime, so Quarterly is
-            # computed manually below; fmt stays unused
-            fmt = None
-        elif self.date_grouping == "Yearly":
-            fmt = "%Y"
-        else:
-            return
-
         if isinstance(self.data, pl.DataFrame):
-            if self.date_grouping == "Bi-Weekly":
-                week_num = pl.col(self.date_col).dt.week()
-                year = pl.col(self.date_col).dt.iso_year().cast(pl.Utf8)
-                bi_week = ((week_num - 1) // 2 * 2 + 1).cast(pl.Utf8).str.zfill(2)
-                self.data = self.data.with_columns(
-                    (year + "-W" + bi_week).alias("DateGrouping")
-                )
-            elif self.date_grouping == "Quarterly":
-                quarter = ((pl.col(self.date_col).dt.month() - 1) // 3 + 1).cast(pl.Utf8)
-                year = pl.col(self.date_col).dt.year().cast(pl.Utf8)
-                self.data = self.data.with_columns(
-                    (year + "-Q" + quarter).alias("DateGrouping")
-                )
-            else:
-                self.data = self.data.with_columns(
-                    pl.col(self.date_col).dt.strftime(fmt).alias("DateGrouping")
-                )
+            self.data = self.data.with_columns(
+                _polars_date_grouping_column(
+                    self.date_col, self.date_grouping
+                ).alias("DateGrouping")
+            )
         elif isinstance(self.data, pd.DataFrame):
-            if self.date_grouping == "Bi-Weekly":
-                iso = self.data[self.date_col].dt.isocalendar()
-                year = iso["year"].astype(str)
-                bi_week = ((iso["week"] - 1) // 2 * 2 + 1).astype(str).str.zfill(2)
-                self.data["DateGrouping"] = year + "-W" + bi_week
-            elif self.date_grouping == "Quarterly":
-                quarter = (self.data[self.date_col].dt.month - 1) // 3 + 1
-                year = self.data[self.date_col].dt.year.astype(str)
-                self.data["DateGrouping"] = year + "-Q" + quarter.astype(str)
-            else:
-                self.data["DateGrouping"] = self.data[self.date_col].dt.strftime(fmt)
+            self.data["DateGrouping"] = _pandas_date_grouping_column(
+                self.data, self.date_col, self.date_grouping
+            )
 
     def get_last_complete_period(self, dt: date) -> Optional[str]:
         """Return the DateGrouping string for the most recent complete period
