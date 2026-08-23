@@ -634,6 +634,7 @@ def map(
     **_: Any,
 ) -> go.Figure:
     hover_cols = hover_cols or []
+    colormaps = colormaps or {}
     geo_info = get_geo_info(country)
 
     if lat_col is not None:
@@ -647,8 +648,8 @@ def map(
     if color_col is not None:
         df = df.sort(color_col)
 
-    fig = px.scatter_mapbox(
-        df,
+    map_style = "carto-darkmatter" if map_theme == "Dark" else "open-street-map"
+    scatter_kwargs = dict(
         lat="lat",
         lon="lon",
         center=geo_info.get("center"),
@@ -659,9 +660,14 @@ def map(
         opacity=1,
         hover_data=hover_cols,
         hover_name=hover_name,
-        mapbox_style="carto-darkmatter" if map_theme == "Dark" else "open-street-map",
         height=500,
     )
+    # plotly >= 6 replaced Mapbox with MapLibre and renamed the factory plus
+    # its style argument
+    if hasattr(px, "scatter_map"):
+        fig = px.scatter_map(df, map_style=map_style, **scatter_kwargs)
+    else:
+        fig = px.scatter_mapbox(df, mapbox_style=map_style, **scatter_kwargs)
 
     fig.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
@@ -768,7 +774,11 @@ def waterfall(shap_values: pd.DataFrame, n_top_features: int = 9) -> go.Figure:
     shap_values = shap_values.T
     shap_values["abs"] = shap_values["shap_value"].abs()
     shap_values = shap_values.sort_values("abs").drop(columns="abs")
-    top_features_frame = shap_values.tail(n_top_features).reset_index().rename(columns={"index": "Feature"})
+    top_features_frame = (
+        shap_values.tail(n_top_features)
+        .reset_index()
+        .rename(columns={"index": "Feature"})
+    )
     frames = []
     if n_other_features > 0:
         other_sum = shap_values.head(feature_count - n_top_features)["shap_value"].sum()

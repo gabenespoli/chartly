@@ -149,3 +149,11 @@ def test_sankey_builds_links_and_drops_zero_flows():
         ("a", "y", 1),
         ("b", "y", 1),
     }
+
+
+def test_map_renders_without_deprecation_warning():
+    df = pd.DataFrame({"lat": [45.0, 46.0], "lon": [-73.0, -72.0]})
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        fig = graphs.map(df)
+    assert fig.data
