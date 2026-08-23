@@ -43,3 +43,9 @@ def test_text_auto_enabled_by_default(df_pandas):
 def test_text_auto_false_disables_labels(df_pandas):
     fig = graphs.graph(df_pandas, x="cat", y="val", text_auto=False)
     assert fig.data[0].texttemplate in (None, "")
+
+
+@pytest.mark.parametrize("graph_type", ["line", "scatter"])
+def test_line_and_scatter_work_with_pandas(df_pandas, graph_type):
+    fig = graphs.graph(df_pandas, x="cat", y="val", graph_type=graph_type)
+    assert fig is not None

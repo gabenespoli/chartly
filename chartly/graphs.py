@@ -225,7 +225,10 @@ def graph(
         kwargs["color_discrete_map"] = color_discrete_map
 
     if graph_type in ["line", "scatter"]:
-        df = df.sort(by=[group_col, x_col])
+        if isinstance(df, pl.DataFrame):
+            df = df.sort(by=[group_col, x_col])
+        else:
+            df = df.sort_values(by=[group_col, x_col])
         fig = px.scatter(
             df, **{k: v for k, v in kwargs.items() if k not in ["barmode", "text_auto", "bar_group"]}
         )
