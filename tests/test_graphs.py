@@ -62,3 +62,23 @@ def test_get_geo_info_unknown_country_raises():
 
 def test_get_geo_info_known_country():
     assert graphs.get_geo_info("CA")["scope"] == "north america"
+
+
+def make_shap_frame(n_features: int) -> pd.DataFrame:
+    data = {"E[f(x)]": [1.0], "f(x)": [2.0]}
+    for i in range(n_features):
+        data[f"f{i}"] = [float(i + 1)]
+    return pd.DataFrame(data, index=["row1"])
+
+
+def test_waterfall_counts_other_features_correctly():
+    fig = graphs.waterfall(make_shap_frame(6), n_top_features=2)
+    labels = [str(x) for x in fig.data[0].y]
+    assert "Sum of 4 other features" in labels
+
+
+def test_waterfall_all_features_requested_adds_no_other_bucket():
+    fig = graphs.waterfall(make_shap_frame(4), n_top_features=9)
+    labels = [str(x) for x in fig.data[0].y]
+    assert len(labels) == 4
+    assert not any("other" in label for label in labels)

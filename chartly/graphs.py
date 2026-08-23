@@ -747,23 +747,30 @@ def waterfall(sv1: pd.DataFrame, n_top_features: int = 9) -> go.Figure:
 
     The id should be the index of the pandas dataframe
     """
-    n_other_features = sv1.shape[1] - n_top_features
     base_value = sv1["E[f(x)]"].iloc[0]
     sv1 = sv1.drop(columns=["E[f(x)]", "f(x)"])
+    # features are columns until the transpose below
+    feature_count = sv1.shape[1]
+    n_top_features = min(n_top_features, feature_count)
+    n_other_features = feature_count - n_top_features
     sv1.index = ["shap_value"]
     sv1 = sv1.T
-    # sv1 = sv1.rename(columns={bs: "shap_value"})
     sv1["abs"] = sv1["shap_value"].abs()
     sv1 = sv1.sort_values("abs").drop(columns="abs")
     tmp = sv1.tail(n_top_features).reset_index().rename(columns={"index": "Feature"})
-    sv1 = sv1.head(sv1.shape[0] - n_top_features)["shap_value"].sum()
-    sv1 = pd.DataFrame(
-        {
-            "Feature": [f"Sum of {n_other_features} other features"],
-            "shap_value": [sv1],
-        }
-    )
-    sv1 = pd.concat([sv1, tmp]).reset_index(drop=True)
+    frames = []
+    if n_other_features > 0:
+        other_sum = sv1.head(feature_count - n_top_features)["shap_value"].sum()
+        frames.append(
+            pd.DataFrame(
+                {
+                    "Feature": [f"Sum of {n_other_features} other features"],
+                    "shap_value": [other_sum],
+                }
+            )
+        )
+    frames.append(tmp)
+    sv1 = pd.concat(frames).reset_index(drop=True)
     fig = go.Figure(
         go.Waterfall(
             name="waterfall",
@@ -772,9 +779,7 @@ def waterfall(sv1: pd.DataFrame, n_top_features: int = 9) -> go.Figure:
             y=sv1["Feature"],
             x=sv1["shap_value"],
             textposition="outside",
-            # text=["+60", "+80", "", "-40", "-20", "Total"],
             text=["{:+}".format(round(x, 3)) for x in sv1["shap_value"]],
-            # connector={"line": {"color": "rgb(63, 63, 63)"}},
         )
     )
     return fig
