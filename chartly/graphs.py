@@ -656,7 +656,7 @@ def map(
 
 
 def sankey(
-    df: pd.DataFrame,
+    df: Union[pd.DataFrame, pl.DataFrame],
     node1: str,
     node2: str,
     node0: str = "Total",
@@ -669,52 +669,55 @@ def sankey(
     the label of the "Total" node, specify node0.
 
     """
-    # Get nodes
+    df = utils.ensure_polars(df)
+
+    # Get nodes; maintain_order keeps pandas' first-appearance node order
     labels = {
         node0: len(df),
-        **{x: sum(df[node1] == x) for x in list(df[node1].unique())},
-        **{x: sum(df[node2] == x) for x in list(df[node2].unique())},
+        **{
+            x: int(df[node1].eq(x).sum())
+            for x in df[node1].unique(maintain_order=True).to_list()
+        },
+        **{
+            x: int(df[node2].eq(x).sum())
+            for x in df[node2].unique(maintain_order=True).to_list()
+        },
     }
-    nodes = pd.DataFrame(data=labels.values(), index=labels.keys(), columns=["value"])
+    node_list = list(labels.keys())
 
+    colors: Optional[Dict[str, str]] = None
     if cmap is not None:
-        cmap = {k: v for k, v in cmap.items() if k in labels}
-        cmap = pd.DataFrame(data=cmap.values(), index=cmap.keys(), columns=["color"])
-        nodes = nodes.join(cmap)
-
-    nodes = nodes.reset_index()
-    nodes = nodes.rename(columns={"index": "node"})
-    node_list = nodes["node"].to_list()
+        colors = {k: v for k, v in cmap.items() if k in labels}
 
     # Define links between nodes
     rows = []
-    for n1 in df[node1].unique():
-        df_n1 = df[df[node1] == n1]
+    for n1 in df[node1].unique(maintain_order=True).to_list():
+        df_n1 = df.filter(col(node1) == n1)
         rows.append({"source": node0, "target": n1, "value": len(df_n1)})
-        for n2 in df[node2].unique():
+        for n2 in df[node2].unique(maintain_order=True).to_list():
             rows.append(
                 {
                     "source": n1,
                     "target": n2,
-                    "value": int((df_n1[node2] == n2).sum()),
+                    "value": len(df_n1.filter(col(node2) == n2)),
                 }
             )
-    links = pd.DataFrame(rows)
-    links = links[links["value"] != 0]
-    links = links.reset_index(drop=True)
+    links = [r for r in rows if r["value"] != 0]
 
     # Draw sankey figure
     fig = go.Figure(
         data=[
             go.Sankey(
                 node=dict(
-                    label=[f"{x.node} ({x.value:,})" for x in nodes.itertuples()],
-                    color=nodes["color"] if cmap is not None else None,
+                    label=[f"{name} ({count:,})" for name, count in labels.items()],
+                    color=[colors.get(name) for name in node_list]
+                    if colors is not None
+                    else None,
                 ),
                 link=dict(
-                    source=[node_list.index(x) for x in links["source"]],
-                    target=[node_list.index(x) for x in links["target"]],
-                    value=links["value"],
+                    source=[node_list.index(r["source"]) for r in links],
+                    target=[node_list.index(r["target"]) for r in links],
+                    value=[r["value"] for r in links],
                     color="gray",
                 ),
             )
