@@ -40,7 +40,7 @@ def test_sunburst_without_colormaps():
 
 
 def test_chart_requires_data():
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         Chart(id="nodata")
 
 

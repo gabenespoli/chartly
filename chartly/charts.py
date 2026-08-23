@@ -73,8 +73,6 @@ class Chart:
         map_hover_cols: Optional[List[str]] = None,
         map_hover_name: Optional[str] = None,
     ) -> None:
-        if data is None:
-            raise ValueError("Chart requires a DataFrame")
         self.id = id
         self.title = title or id
         self.data = data
