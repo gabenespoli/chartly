@@ -176,3 +176,28 @@ def test_filter_date_range_inclusive(frame):
     out = Chart._filter_date_range(df, "2024-01", "2024-02")
     got = out["DateGrouping"].tolist() if frame == "pandas" else out["DateGrouping"].to_list()
     assert got == ["2024-01", "2024-02"]
+
+
+def test_highlight_monthly_regions_annotates_values_and_diffs():
+    go = pytest.importorskip("plotly.graph_objects")
+    months = (
+        [date(2023, m, 15) for m in range(7, 13)]
+        + [date(2024, m, 15) for m in range(1, 6)]
+    )
+    df = pl.DataFrame({"Month": months, "amount": [100.0] * len(months)})
+    stub = SimpleNamespace(graph_type="bar", data=df, y="amount", fig=go.Figure())
+    Chart.highlight_monthly_regions(
+        stub,
+        grouping="Fiscal Half-Year",
+        min_date=date(2022, 6, 1),
+        max_date=date(2024, 5, 31),
+        min_month_chart=date(2023, 6, 1),
+    )
+    texts = [a.text for a in stub.fig.layout.annotations]
+    # Partial first period Jul-Sep 2023, then Oct 2023 - Mar 2024, then the
+    # incomplete final period Apr-May 2024
+    assert "300.0" in texts
+    assert "600.0" in texts
+    assert "200.0" in texts
+    assert "+300.0 | +100.0%" in texts
+    assert "-400.0 | -66.7%" in texts

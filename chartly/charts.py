@@ -756,7 +756,7 @@ class Chart:
         Alternate background color for each period in the chart.
 
         Args:
-            grouping: Year, Half-Year, Quarter, Fiscal Year, Fisal Half-Year,
+            grouping: Year, Fiscal Year, Half-Year, Fiscal Half-Year, Quarter,
                 Fiscal Quarter
 
         Returns:
@@ -804,7 +804,7 @@ class Chart:
             dates = [dates[0] - relativedelta(months=3)] + list(dates)
 
         else:
-            return []
+            return
 
         dates = [x.date() for x in dates]
         add_final_period = dates[-1] + relativedelta(day=31) < max_date
@@ -817,7 +817,6 @@ class Chart:
                     x0=dates[idx],
                     x1=dates[idx + 1],
                     fillcolor=fillcolor if idx % 2 == 0 else None,
-                    title="",
                     text="",
                 )
             )
@@ -828,13 +827,20 @@ class Chart:
                     x0=dates[-1],
                     x1=max_date - relativedelta(day=15),
                     fillcolor=fillcolor if len(periods) % 2 == 0 else None,
-                    title="",
                     text="<br>*INCOMPLETE PERIOD*",
                 )
             )
 
         # loop periods and add vrects/text
         # --------------------------------
+        max_val = (
+            self.data.group_by("Month")
+            .agg(pl.sum(self.y))
+            .select(self.y)
+            .max()
+            .item()
+        )
+        prev_val = None
         for idx, period in enumerate(periods):
             fc = font_color if idx % 2 == 0 else None
             first_idx = 0 if idx == 0 else first_idx
@@ -855,9 +861,6 @@ class Chart:
                 line_width=0,
             )
 
-            if idx > first_idx:
-                val0 = val
-
             period["title"] = (
                 f'{period["x0"] + relativedelta(months=1, day=1)} – {period["x1"] + relativedelta(day=31)}'
             )
@@ -871,23 +874,14 @@ class Chart:
                 .item()
             )
 
-            max_val = (
-                self.data.group_by("Month")
-                .agg(pl.sum(self.y))
-                .select(self.y)
-                .max()
-                .item()
+            self.fig.add_annotation(
+                x=period["x0"] + (period["x1"] - period["x0"]) / 2,
+                y=max_val * 1.2,
+                text=period["title"],
+                showarrow=False,
+                font=dict(size=16),
+                font_color=fc,
             )
-
-            if period["title"] != "":
-                self.fig.add_annotation(
-                    x=period["x0"] + (period["x1"] - period["x0"]) / 2,
-                    y=max_val * 1.2,
-                    text=period["title"],
-                    showarrow=False,
-                    font=dict(size=16),
-                    font_color=fc,
-                )
 
             self.fig.add_annotation(
                 x=period["x0"] + (period["x1"] - period["x0"]) / 2,
@@ -899,9 +893,9 @@ class Chart:
             )
 
             if idx > first_idx:
-                valdiff = val - val0
-                valdiffpct = valdiff / val0 if val0 != 0 else 1
-                text = f"{val - val0:+,} | {valdiffpct:+.1%}"
+                valdiff = val - prev_val
+                valdiffpct = valdiff / prev_val if prev_val != 0 else 1
+                text = f"{valdiff:+,} | {valdiffpct:+.1%}"
                 if period["text"] != "":
                     diff_font_color = "blue"
                 else:
@@ -924,3 +918,5 @@ class Chart:
                     font=dict(size=16),
                     font_color=fc,
                 )
+
+            prev_val = val
