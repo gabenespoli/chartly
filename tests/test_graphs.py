@@ -33,3 +33,13 @@ def test_unsortable_column_skips_ordering(capsys):
     df = pd.DataFrame({"cat": ["a", 1, "b"], "val": [1, 2, 3]})
     graphs.graph(df, x="cat", y="val")
     assert "unsortable" in capsys.readouterr().out.lower()
+
+
+def test_text_auto_enabled_by_default(df_pandas):
+    fig = graphs.graph(df_pandas, x="cat", y="val")
+    assert fig.data[0].texttemplate is not None
+
+
+def test_text_auto_false_disables_labels(df_pandas):
+    fig = graphs.graph(df_pandas, x="cat", y="val", text_auto=False)
+    assert fig.data[0].texttemplate in (None, "")

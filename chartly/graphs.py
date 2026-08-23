@@ -185,8 +185,7 @@ def graph(
         else:
             raise ValueError("df should be a pandas or polars DataFrame")
 
-    text_auto = text_auto or True
-    kwargs["text_auto"] = text_auto
+    kwargs["text_auto"] = True if text_auto is None else text_auto
 
     if (
         sort_legend_by_value
