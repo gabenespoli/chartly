@@ -145,7 +145,8 @@ def hash_func(obj: Filter) -> str:
 def combine_filters(filter1: Optional[Filter], filter2: Optional[Filter]) -> Optional[Filter]:
     """Combine two filters into a single filter.
     If same key exists in both, prefer the first filter, unless it is empty then use the
-    second filter.
+    second filter. Metadata (col_names, filter_types, bypass_options) follows whichever
+    filter supplied each label, so the combined filter works with filter_data.
     """
     if filter1 is None:
         return filter2
@@ -154,23 +155,35 @@ def combine_filters(filter1: Optional[Filter], filter2: Optional[Filter]) -> Opt
     f1 = filter1.filters
     f2 = filter2.filters
     filters = dict()
-    for col_name in list(set(list(f1.keys()) + list(f2.keys()))):
+    col_names = dict()
+    filter_types = dict()
+    bypass_options = dict()
+    for label in list(set(list(f1.keys()) + list(f2.keys()))):
         if (
-            col_name in f1.keys()
-            and f1.get(col_name) is not None
-            and f1.get(col_name) != []
+            label in f1.keys()
+            and f1.get(label) is not None
+            and f1.get(label) != []
         ):
-            filters[col_name] = f1.get(col_name)
+            source = filter1
         elif (
-            col_name in f2.keys()
-            and f2.get(col_name) is not None
-            and f2.get(col_name) != []
+            label in f2.keys()
+            and f2.get(label) is not None
+            and f2.get(label) != []
         ):
-            filters[col_name] = f2.get(col_name)
+            source = filter2
+        else:
+            continue
+        filters[label] = source.filters[label]
+        col_names[label] = source.col_names.get(label, label)
+        filter_types[label] = source.filter_types.get(label)
+        bypass_options[label] = source.bypass_options.get(label)
     flt = Filter(
         id=filter1.id + "_" + filter2.id,
         filters=filters,
     )
+    flt.col_names = col_names
+    flt.filter_types = filter_types
+    flt.bypass_options = bypass_options
     return flt
 
 
