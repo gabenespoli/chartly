@@ -31,6 +31,16 @@ DATE_GROUPING_MAP = {
     "Yearly": "1y",
 }
 
+# pd.Grouper does not understand the polars-style strings in DATE_GROUPING_MAP
+PANDAS_DATE_GROUPING_MAP = {
+    "Daily": "1D",
+    "Weekly": "1W",
+    "Bi-Weekly": "2W",
+    "Monthly": "1ME",
+    "Quarterly": "1QE",
+    "Yearly": "1YE",
+}
+
 
 class Chart:
     def __init__(
@@ -132,19 +142,26 @@ class Chart:
         extra_grp_cols = extra_grp_cols or []
         if isinstance(df, pd.DataFrame):
             df = df.set_index(date_col)
-            grp: List[Any] = [pd.Grouper(freq=DATE_GROUPING_MAP[date_grouping])]
+            grp: List[Any] = [pd.Grouper(freq=PANDAS_DATE_GROUPING_MAP[date_grouping])]
             if grp_col is not None:
                 grp = grp + [grp_col]
             grp = grp + extra_grp_cols
             df = df.groupby(grp)["Amount"].sum().reset_index()
             if date_col in df.columns:
-                df["DateGrouping"] = df[date_col].dt.strftime(
-                    "%Y-%m" if date_grouping == "Monthly" else
-                    "%Y-Q%q" if date_grouping == "Quarterly" else
-                    "%Y" if date_grouping == "Yearly" else
-                    "%Y-W%V" if date_grouping == "Weekly" else
-                    "%Y-W%V"
-                )
+                if date_grouping == "Quarterly":
+                    quarter = (df[date_col].dt.month - 1) // 3 + 1
+                    year = df[date_col].dt.year.astype(str)
+                    df["DateGrouping"] = year + "-Q" + quarter.astype(str)
+                elif date_grouping == "Yearly":
+                    df["DateGrouping"] = df[date_col].dt.strftime("%Y")
+                elif date_grouping == "Monthly":
+                    df["DateGrouping"] = df[date_col].dt.strftime("%Y-%m")
+                elif date_grouping == "Daily":
+                    df["DateGrouping"] = df[date_col].dt.strftime("%Y-%m-%d")
+                else:
+                    # Weekly and Bi-Weekly buckets are labeled by ISO week of the
+                    # bucket end date
+                    df["DateGrouping"] = df[date_col].dt.strftime("%Y-W%V")
         elif isinstance(df, pl.DataFrame):
             all_grp_cols = [x for x in [grp_col] + extra_grp_cols if x is not None]
             all_grp_cols = list(dict.fromkeys(all_grp_cols))
