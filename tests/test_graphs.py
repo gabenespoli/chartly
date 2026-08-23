@@ -49,3 +49,16 @@ def test_text_auto_false_disables_labels(df_pandas):
 def test_line_and_scatter_work_with_pandas(df_pandas, graph_type):
     fig = graphs.graph(df_pandas, x="cat", y="val", graph_type=graph_type)
     assert fig is not None
+
+
+def test_get_geo_info_none_defaults_to_world():
+    assert graphs.get_geo_info(None)["scope"] == "world"
+
+
+def test_get_geo_info_unknown_country_raises():
+    with pytest.raises(ValueError, match="USA"):
+        graphs.get_geo_info("USA")
+
+
+def test_get_geo_info_known_country():
+    assert graphs.get_geo_info("CA")["scope"] == "north america"

@@ -588,6 +588,10 @@ def get_geo_info(country: Optional[str]) -> Dict[str, Any]:
             showcountries=True,
         ),
     }
+    if country is not None and country not in geo_infos:
+        raise ValueError(
+            f"Unknown country {country!r}; expected one of {sorted(geo_infos)}"
+        )
     return geo_infos.get(country, geo_infos["WORLD"])
 
 
