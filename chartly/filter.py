@@ -123,16 +123,16 @@ class Filter:
         # Make sure prefix has a trailing dot
         if prefix is not None and prefix != "":
             prefix = prefix + "." if prefix[-1] != "." else prefix
-        # Only include filter if it is not empty
-        filter_list = [
-            (
-                f"{prefix}{col_name} in {self.list([str(x) for x in values])}"
-                if values != []
-                else None
+        filter_list = []
+        for label, value in self.filters.items():
+            if value == []:
+                continue
+            if not isinstance(value, list):
+                # selectbox filters store a scalar instead of a list
+                value = [value]
+            filter_list.append(
+                f"{prefix}{label} in {self.list([str(x) for x in value])}"
             )
-            for col_name, values in self.filters.items()
-        ]
-        filter_list = list(filter(lambda x: x is not None, filter_list))
         if filter_list == []:
             return ""
         return where_or_and + " " + " and ".join(filter_list)
