@@ -1,5 +1,6 @@
 import warnings
 from datetime import date
+from types import SimpleNamespace
 
 import pandas as pd
 import polars as pl
@@ -8,6 +9,13 @@ import pytest
 from chartly import Chart
 
 warnings.filterwarnings("ignore")
+
+
+def make_pandas_chart_stub(df: pd.DataFrame) -> SimpleNamespace:
+    """Chart construction does not support pandas frames, so exercise the
+    pandas branches of instance methods through a stand-in carrying the
+    attributes those methods read."""
+    return SimpleNamespace(data=df, date_col="Datetime")
 
 
 def make_chart(graph_type: str) -> Chart:
@@ -84,3 +92,30 @@ def test_group_by_date_polars_quarterly_matches_pandas(date_df_pandas):
     assert sorted(out_pl["DateGrouping"].to_list()) == sorted(
         out_pd["DateGrouping"].tolist()
     )
+
+
+@pytest.fixture
+def iso_boundary_df():
+    # Both dates are in ISO week 53 of ISO year 2026, though 2027-01-01 has
+    # calendar year 2027
+    return pd.DataFrame(
+        {
+            "Datetime": pd.to_datetime(["2026-12-30", "2027-01-01"]),
+            "Amount": [1, 2],
+        }
+    )
+
+
+def test_add_date_grouping_column_quarterly_pandas(iso_boundary_df):
+    df = pd.DataFrame(
+        {
+            "Datetime": pd.to_datetime(["2024-02-15", "2024-05-20"]),
+            "Amount": [1, 2],
+        }
+    )
+    chart = make_pandas_chart_stub(df)
+    chart.date_grouping = "Quarterly"
+    Chart.add_date_grouping_column(chart)
+    assert list(chart.data["DateGrouping"]) == ["2024-Q1", "2024-Q2"]
+
+

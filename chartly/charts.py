@@ -238,7 +238,9 @@ class Chart:
         elif self.date_grouping == "Monthly":
             fmt = "%Y-%m"
         elif self.date_grouping == "Quarterly":
-            fmt = "%Y-Q%q"
+            # %q is not supported by pandas Timestamp.strftime, so Quarterly is
+            # computed manually below; fmt stays unused
+            fmt = None
         elif self.date_grouping == "Yearly":
             fmt = "%Y"
         else:
@@ -263,7 +265,12 @@ class Chart:
                     pl.col(self.date_col).dt.strftime(fmt).alias("DateGrouping")
                 )
         elif isinstance(self.data, pd.DataFrame):
-            self.data["DateGrouping"] = self.data[self.date_col].dt.strftime(fmt)
+            if self.date_grouping == "Quarterly":
+                quarter = (self.data[self.date_col].dt.month - 1) // 3 + 1
+                year = self.data[self.date_col].dt.year.astype(str)
+                self.data["DateGrouping"] = year + "-Q" + quarter.astype(str)
+            else:
+                self.data["DateGrouping"] = self.data[self.date_col].dt.strftime(fmt)
 
     def get_last_complete_period(self, dt: date) -> Optional[str]:
         """Return the DateGrouping string for the most recent complete period
