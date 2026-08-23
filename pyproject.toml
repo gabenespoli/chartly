@@ -20,6 +20,7 @@ dependencies = {file = ["requirements.txt"]}
 dev = [
     "black>=23.0",
     "isort>=5.12",
+    "pytest>=8.0",
 ]
 
 [tool.black]
