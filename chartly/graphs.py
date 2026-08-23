@@ -1,3 +1,11 @@
+"""Plotly figure factory functions for various chart types.
+
+This module provides opinionated wrappers around Plotly Express and
+Plotly Graph Objects to produce bar, line, scatter, donut, sunburst,
+map, sankey, and waterfall charts with automatic color mapping, category
+ordering, and legend formatting.
+"""
+
 import warnings
 from decimal import Decimal
 from math import floor
@@ -25,8 +33,26 @@ def millify(
     drop_nulls: bool = True,
     prefixes: Optional[List[str]] = None,
 ) -> str:
+    """Format a number with human-readable suffixes (k, M, B, T, etc.).
+
+    Based on `millify <https://github.com/azaitsev/millify>`_ by Alexander Zaitsev.
+
+    Args:
+        n: The number to format.
+        precision: Number of significant digits to keep.
+        drop_nulls: If True, remove trailing zeros from the result.
+        prefixes: Custom suffix list. Defaults to ["", "k", "M", "B", "T", ...].
+
+    Returns:
+        A compact string representation (e.g., "1.5M", "300k").
+
+    Example:
+        >>> millify(1_500_000)
+        '1.5M'
+        >>> millify(42)
+        '42'
+    """
     prefixes = prefixes or []
-    # https://github.com/azaitsev/millify
     millnames = ["", "k", "M", "B", "T", "P", "E", "Z", "Y"]
     if prefixes:
         millnames = [""]
@@ -53,10 +79,21 @@ def _add_category_orders(
     kwargs: Dict[str, Any],
     colormaps: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Set category orders based on the order in the color map.
-    Otherwise sort the values alphabetically.
+    """Set category orders for Plotly figures based on color maps or alphabetical sort.
+
+    If a color map is provided for a column, its key order determines the
+    category order. Otherwise, unique values are sorted alphabetically.
 
     Returns a new dict; the input kwargs is not mutated.
+
+    Args:
+        df: The DataFrame being plotted.
+        plot_vars: List of kwargs keys to check (e.g., ["x", "y", "color"]).
+        kwargs: The keyword arguments dict being built for Plotly.
+        colormaps: Mapping of column names to color dictionaries.
+
+    Returns:
+        The updated kwargs dict with ``category_orders`` set.
     """
     colormaps = colormaps or {}
     existing_orders = kwargs.get("category_orders") or {}
@@ -84,8 +121,18 @@ def _add_category_orders(
 
 
 def _get_height(df: pl.DataFrame, kwargs: Dict[str, Any]) -> int:
-    """Adjust graph height based on the number of categories that will be plotted with
-    facet_row"""
+    """Calculate appropriate chart height based on facet row count.
+
+    Returns a taller chart (800px) when there are more than 4 facet rows,
+    otherwise returns the default height (550px).
+
+    Args:
+        df: The DataFrame being plotted.
+        kwargs: Plot keyword arguments (checked for "height" and "facet_row").
+
+    Returns:
+        Chart height in pixels.
+    """
     default_height = 550
     if "height" in kwargs.keys() or kwargs.get("facet_row") is None:
         return default_height
@@ -286,22 +333,39 @@ def graph(
     colormaps: Optional[Dict[str, Any]] = None,
     **kwargs: Any,
 ) -> go.Figure:
-    """
-    Args:
-        legend_reversed: Reverse the order of the legend so it matches the order of the
-            colors on the bars.
-        legend_hide_title: Hide the title of the legend.
-        color_matches_xy: Set the color of the bars to match the x or y axis (depends on
-            orientation).
-        sort_legend_by_value: Sort the legend by the sum of the values in each category.
-        pre_agg_for_text_auto: Pre-aggregate the data to get the proper text_auto
-            values.
+    """Create a bar, line, or scatter Plotly figure with automatic aggregation.
 
-    Note: the boolean flags here (legend_reversed, legend_hide_title,
-    color_matches_xy, sort_legend_by_value, pre_agg_for_text_auto) would normally
-    be split into separate functions, but they are kept as flags for API
-    compatibility with Chart.update_figure's options popover. Revisit only if a
-    major version changes this public surface.
+    This is the primary graph factory. It pre-aggregates data, applies color
+    maps and category ordering, handles orientation flipping, and supports
+    grouped+stacked bar charts.
+
+    Args:
+        df: Source DataFrame (Pandas or Polars).
+        legend_reversed: Reverse legend order to match stacked bar order.
+        legend_hide_title: Hide the legend title.
+        font_size: Base font size for the figure.
+        text_auto: Text label format for bars. True for automatic formatting.
+        color_matches_xy: If True and no color column is set, use the x/y
+            grouping column as the color.
+        sort_legend_by_value: Sort legend entries by their total value
+            (descending), appending the total to each legend label.
+        pre_agg_for_text_auto: Pre-aggregate data so text labels show correct
+            totals per bar segment.
+        agg_func: Aggregation function — "sum" or "mean".
+        graph_type: One of "bar", "line", or "scatter".
+        colormaps: Dictionary mapping column names to color maps.
+        **kwargs: Additional Plotly Express arguments (x, y, color, facet_col,
+            facet_row, barmode, orientation, height, bar_group, etc.).
+
+    Returns:
+        A configured Plotly Figure object.
+
+    Note:
+        The boolean flags here (legend_reversed, legend_hide_title,
+        color_matches_xy, sort_legend_by_value, pre_agg_for_text_auto) would
+        normally be split into separate functions, but they are kept as flags
+        for API compatibility with Chart.update_figure's options popover.
+        Revisit only if a major version changes this public surface.
     """
     df = utils.ensure_polars(df)
     colormaps = colormaps or {}
@@ -451,9 +515,26 @@ def donut(
     hole: float = 0.35,
     **kwargs: Any,
 ) -> go.Figure:
-    """
-    - automatically looks for the names, facet_col, and facet_row args, and uses the
-    colors module to set color maps and category orders
+    """Create a donut (pie with hole) chart with automatic color mapping.
+
+    Automatically applies color maps and category ordering based on the
+    ``names`` column. Displays percentage and value inside each slice.
+
+    Args:
+        *args: Positional arguments; the first should be the DataFrame.
+        legend_reversed: Reverse legend order.
+        legend_bottom: Place legend below the chart horizontally.
+        showlegend: Whether to show the legend.
+        sort: If True, sort slices by size. If False, maintain DataFrame order.
+        legend_hide_title: Hide the legend title.
+        font_size: Base font size.
+        colormaps: Dictionary mapping column names to color maps.
+        hole: Size of the donut hole (0 to 1). Default 0.35.
+        **kwargs: Additional Plotly Express pie arguments (values, names,
+            facet_col, facet_row, height, etc.).
+
+    Returns:
+        A configured Plotly Figure object.
     """
     df = kwargs.pop("data_frame", None)
     if df is None:
@@ -521,6 +602,16 @@ def donut(
 
 
 def get_geo_info(country: Optional[str]) -> Dict[str, Any]:
+    """Get map center, zoom, and scope configuration for a country code.
+
+    Args:
+        country: ISO country code or region identifier (e.g., "US", "CA", "DE",
+            "UK", "WORLD"). Returns world config if not recognized.
+
+    Returns:
+        Dictionary with ``center`` and ``zoom`` (passed to the scatter map
+        figure) plus ``scope`` and ``resolution`` describing the map view.
+    """
     geo_infos = {
         "CA": dict(
             scope="north america",
@@ -595,12 +686,37 @@ def map(
     hover_cols: Optional[List[str]] = None,
     hover_name: Optional[str] = None,
     legend_hide_title: bool = False,
-    lat_col: str = "lat",  # BillingLatitude
-    lon_col: str = "lon",  # BillingLongitude
+    lat_col: str = "lat",
+    lon_col: str = "lon",
     font_size: int = FONT_SIZE,
     colormaps: Optional[Dict[str, Any]] = None,
     **_: Any,
 ) -> go.Figure:
+    """Create a scatter map figure from lat/lon data.
+
+    Renders points on an interactive map with optional size and color encoding.
+
+    Args:
+        df: DataFrame (Pandas or Polars) with latitude and longitude columns.
+            Converted to Polars internally.
+        country: Country/region code for default map centering (see
+            :func:`get_geo_info`).
+        size_col: Column name for bubble size. Negative values are clamped to 0.
+        color_col: Column name for point color encoding.
+        map_theme: Map tile style — "Light" (OpenStreetMap) or "Dark"
+            (CARTO dark matter).
+        hover_cols: Additional columns to show in hover tooltips.
+        hover_name: Column whose values label points on hover.
+        legend_hide_title: Hide the legend title.
+        lat_col: Name of the latitude column. Default "lat".
+        lon_col: Name of the longitude column. Default "lon".
+        font_size: Base font size for legend.
+        colormaps: Dictionary mapping column names to color maps.
+        **_: Ignored; accepts and discards extra Chart options.
+
+    Returns:
+        A configured Plotly Figure with scatter map trace.
+    """
     df = utils.ensure_polars(df)
     hover_cols = hover_cols or []
     colormaps = colormaps or {}
@@ -726,9 +842,19 @@ def sankey(
 
 
 def sunburst(df: Union[pd.DataFrame, pl.DataFrame], **kwargs: Any) -> go.Figure:
-    # Pure passthrough of px.sunburst. Kept deliberately as a stable seam so
-    # callers can treat graph/donut/sunburst uniformly; revisit if the package
-    # ever cuts a major version.
+    """Create a sunburst chart for hierarchical data exploration.
+
+    Pure passthrough of ``px.sunburst``, kept deliberately as a stable seam so
+    callers can treat graph/donut/sunburst uniformly.
+
+    Args:
+        df: Source DataFrame (Pandas or Polars).
+        **kwargs: Arguments passed directly to ``plotly.express.sunburst()``
+            (e.g., path, values, color, color_discrete_map, height).
+
+    Returns:
+        A Plotly sunburst Figure.
+    """
     fig = px.sunburst(utils.ensure_polars(df), **kwargs)
     return fig
 

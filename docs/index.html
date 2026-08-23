@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chartly Documentation</title>
+    <style>
+        :root {
+            --primary: #150458;
+            --primary-light: #e8d5f5;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --bg: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-sidebar: #f8f9fa;
+            --text: #212529;
+            --text-muted: #6c757d;
+            --border: #dee2e6;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.1);
+            --code-bg: #f4f4f7;
+            --link: #6366f1;
+            --sidebar-width: 260px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        a { color: var(--link); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code {
+            background: var(--code-bg);
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+            font-size: 0.88em;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+
+        /* Layout: sidebar + main */
+        .page-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            overflow-y: auto;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            padding: 1rem 0;
+            z-index: 200;
+            transition: transform 0.2s;
+        }
+        .sidebar-logo {
+            padding: 0.5rem 1.25rem 1rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 0.75rem;
+        }
+        .sidebar-search {
+            padding: 0 1rem 0.75rem;
+        }
+        .sidebar-search button {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.45rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+        .sidebar-search button:hover { border-color: var(--accent); }
+        .sidebar-search kbd {
+            margin-left: auto;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 0.1rem 0.35rem;
+            font-size: 0.72rem;
+            font-family: inherit;
+        }
+        .sidebar-section {
+            padding: 0.5rem 0;
+        }
+        .sidebar-section-title {
+            padding: 0.3rem 1.25rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+        .sidebar-link {
+            display: block;
+            padding: 0.25rem 1.25rem 0.25rem 1.5rem;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.1s, background 0.1s;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sidebar-link:hover {
+            color: var(--accent);
+            background: var(--bg);
+            text-decoration: none;
+        }
+        .sidebar-link.active {
+            color: var(--accent);
+            border-left: 2px solid var(--accent);
+            padding-left: calc(1.5rem - 2px);
+        }
+        .sidebar-link--heading {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text);
+            padding-left: 1.25rem;
+        }
+
+        /* Main content area */
+        .main {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* Header / Navbar */
+        header {
+            border-bottom: 1px solid var(--border);
+            background: var(--bg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        header .container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            height: 50px;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+        nav ul { list-style: none; display: flex; gap: 1.5rem; align-items: center; }
+        nav ul a { color: var(--text-muted); font-size: 0.9rem; font-weight: 500; }
+        nav ul a:hover { color: var(--text); text-decoration: none; }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 0 1.5rem; }
+
+        /* Hero */
+        .hero {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 3rem 0;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 650px;
+            margin: 0 auto 1.5rem;
+        }
+        .hero-links { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .hero-links a {
+            display: inline-block;
+            padding: 0.5rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .btn-primary { background: var(--accent); color: #fff !important; }
+        .btn-primary:hover { background: var(--accent-hover); text-decoration: none; }
+        .btn-secondary { border: 1px solid var(--border); color: var(--text) !important; }
+        .btn-secondary:hover { border-color: var(--accent); text-decoration: none; }
+
+        /* Intro cards grid */
+        .intro-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+            padding: 3rem 0;
+        }
+        .intro-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.75rem;
+            box-shadow: var(--card-shadow);
+            transition: box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        .intro-card:hover { box-shadow: var(--card-shadow-hover); }
+        .intro-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+        .intro-card p { color: var(--text-muted); font-size: 0.92rem; flex: 1; }
+        .intro-card .card-link {
+            display: inline-block;
+            margin-top: 1rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        /* Sections */
+        section { padding: 3rem 0; border-top: 1px solid var(--border); }
+        section h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        section > .container > p { color: var(--text-muted); margin-bottom: 1.5rem; }
+        section h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin: 2rem 0 0.75rem;
+            color: var(--text);
+        }
+
+        /* Code blocks */
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.25rem 1.5rem;
+            overflow-x: auto;
+            margin: 1rem 0 1.5rem;
+        }
+        .code-block pre {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: var(--text);
+        }
+        .kw { color: #8b5cf6; }
+        .fn { color: #2563eb; }
+        .str { color: #059669; }
+        .cm { color: #6b7280; font-style: italic; }
+
+        /* API cards */
+        .api-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        .api-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.25rem 1.5rem;
+        }
+        .api-card h4 {
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 0.92rem;
+            color: var(--accent);
+            margin-bottom: 0.4rem;
+            font-weight: 600;
+        }
+        .api-card p { color: var(--text-muted); font-size: 0.9rem; }
+
+        /* Params table */
+        .params {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0 2rem;
+            font-size: 0.9rem;
+        }
+        .params th {
+            text-align: left;
+            padding: 0.6rem 1rem;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .params td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        .params td:first-child {
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 0.85rem;
+            color: var(--accent);
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 1.5rem 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            background: var(--bg-secondary);
+        }
+
+        /* Dark theme */
+        [data-theme="dark"] {
+            --primary: #e2e8f0;
+            --primary-light: #1e293b;
+            --accent: #22d3ee;
+            --accent-hover: #06b6d4;
+            --bg: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-sidebar: #0b1120;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+            --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.4);
+            --code-bg: #1e293b;
+            --link: #22d3ee;
+        }
+        [data-theme="dark"] .kw { color: #a78bfa; }
+        [data-theme="dark"] .fn { color: #60a5fa; }
+        [data-theme="dark"] .str { color: #34d399; }
+        [data-theme="dark"] .cm { color: #64748b; }
+        [data-theme="dark"] .btn-primary { background: #6366f1; }
+        [data-theme="dark"] .btn-primary:hover { background: #4f46e5; }
+        [data-theme="dark"] .btn-secondary { color: var(--text) !important; border-color: var(--border); }
+        [data-theme="dark"] header { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); }
+        [data-theme="dark"] .sidebar { background: var(--bg-sidebar); }
+
+        /* Theme toggle */
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.4rem 0.6rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            line-height: 1;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .theme-toggle:hover { color: var(--text); border-color: var(--accent); }
+
+        /* Search modal */
+        .search-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 15vh;
+        }
+        .search-overlay.open { display: flex; }
+        .search-modal {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            width: 90%;
+            max-width: 560px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .search-input-wrap {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            gap: 0.5rem;
+        }
+        .search-input-wrap svg { flex-shrink: 0; color: var(--text-muted); }
+        .search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 1rem;
+            color: var(--text);
+            font-family: inherit;
+        }
+        .search-input::placeholder { color: var(--text-muted); }
+        .search-results {
+            max-height: 360px;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+        .search-result {
+            display: block;
+            padding: 0.6rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            color: var(--text);
+            transition: background 0.1s;
+        }
+        .search-result:hover, .search-result.active {
+            background: var(--bg-secondary);
+            text-decoration: none;
+        }
+        .search-result-title {
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+        .search-result-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+        .search-empty {
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .search-hint {
+            padding: 0.5rem 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Mobile sidebar toggle */
+        .sidebar-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 0.25rem;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); z-index: 300; }
+            .sidebar.open { transform: translateX(0); }
+            .main { margin-left: 0; }
+            .sidebar-toggle { display: block; }
+            .hero h1 { font-size: 1.8rem; }
+            .intro-grid { grid-template-columns: 1fr; }
+            header .container { justify-content: space-between; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-layout">
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">chartly</div>
+    <div class="sidebar-search">
+        <button id="search-btn" type="button">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M12.5 12.5L17 17"/></svg>
+            Search...
+            <kbd>&#8984;K</kbd>
+        </button>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Guide</div>
+        <a href="#getting-started" class="sidebar-link sidebar-link--heading">Getting Started</a>
+        <a href="#installation" class="sidebar-link">Installation</a>
+        <a href="#minimal-example" class="sidebar-link">Minimal Example</a>
+        <a href="#with-filters" class="sidebar-link">With Filters</a>
+        <a href="#date-grouping" class="sidebar-link">Date Grouping</a>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Chart</div>
+        <a href="#api-chart" class="sidebar-link sidebar-link--heading">Overview</a>
+        <a href="#chart-init" class="sidebar-link">Chart(id, data, ...)</a>
+        <a href="#chart-update-figure" class="sidebar-link">update_figure()</a>
+        <a href="#chart-show-figure" class="sidebar-link">show_figure()</a>
+        <a href="#chart-get-date-grouping" class="sidebar-link">get_date_grouping()</a>
+        <a href="#chart-show-data" class="sidebar-link">show_data()</a>
+        <a href="#chart-group-by-date" class="sidebar-link">group_by_date()</a>
+        <a href="#chart-header" class="sidebar-link">header()</a>
+        <a href="#chart-highlight" class="sidebar-link">highlight_monthly_regions()</a>
+        <a href="#chart-params" class="sidebar-link">Constructor Parameters</a>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Filter</div>
+        <a href="#api-filter" class="sidebar-link sidebar-link--heading">Overview</a>
+        <a href="#filter-init" class="sidebar-link">Filter(id, ...)</a>
+        <a href="#filter-selectbox" class="sidebar-link">selectbox()</a>
+        <a href="#filter-multiselect" class="sidebar-link">multiselect()</a>
+        <a href="#filter-sql" class="sidebar-link">filter_sql()</a>
+        <a href="#filter-data" class="sidebar-link">filter_data()</a>
+        <a href="#combine-filters" class="sidebar-link">combine_filters()</a>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Graphs</div>
+        <a href="#api-graphs" class="sidebar-link sidebar-link--heading">Overview</a>
+        <a href="#graphs-graph" class="sidebar-link">graph()</a>
+        <a href="#graphs-donut" class="sidebar-link">donut()</a>
+        <a href="#graphs-map" class="sidebar-link">map()</a>
+        <a href="#graphs-sankey" class="sidebar-link">sankey()</a>
+        <a href="#graphs-sunburst" class="sidebar-link">sunburst()</a>
+        <a href="#graphs-waterfall" class="sidebar-link">waterfall()</a>
+        <a href="#graphs-millify" class="sidebar-link">millify()</a>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Utilities</div>
+        <a href="#api-utils" class="sidebar-link sidebar-link--heading">Overview</a>
+        <a href="#utils-pl2pd" class="sidebar-link">pl2pd()</a>
+    </div>
+</aside>
+
+<!-- Main content -->
+<div class="main">
+
+<header>
+    <div class="container">
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">&#9776;</button>
+        <nav>
+            <ul>
+                <li><a href="https://github.com/gabenespoli/chartly">GitHub</a></li>
+                <li><button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">&#9790;</button></li>
+            </ul>
+        </nav>
+    </div>
+</header>
+
+<div class="hero">
+    <div class="container">
+        <h1>chartly</h1>
+        <p>
+            An open-source Python library for interactive, multi-perspective data
+            visualization built on Plotly and Streamlit.
+        </p>
+        <div class="hero-links">
+            <a href="#getting-started" class="btn-primary">Getting Started</a>
+            <a href="#api-chart" class="btn-secondary">API Reference</a>
+            <a href="https://github.com/gabenespoli/chartly" class="btn-secondary">Source Repository</a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="intro-grid">
+        <div class="intro-card">
+            <h3>Getting Started</h3>
+            <p>New to chartly? Install the package, hand it a DataFrame, and get an
+            interactive multi-chart widget in three lines of code.</p>
+            <a href="#getting-started" class="card-link">To the getting started guide &rarr;</a>
+        </div>
+        <div class="intro-card">
+            <h3>Chart Class</h3>
+            <p>The central widget. Configure your axes, colors, graph type, and defaults &mdash;
+            chartly renders all interactive controls and the Plotly figure for you.</p>
+            <a href="#api-chart" class="card-link">To the Chart reference &rarr;</a>
+        </div>
+        <div class="intro-card">
+            <h3>Filter Class</h3>
+            <p>Build reusable, cached Streamlit filter UIs that apply to Polars
+            DataFrames or generate SQL WHERE clauses.</p>
+            <a href="#api-filter" class="card-link">To the Filter reference &rarr;</a>
+        </div>
+        <div class="intro-card">
+            <h3>Graphs Module</h3>
+            <p>Low-level Plotly figure factories for bar, line, scatter, donut,
+            sunburst, map, sankey, and waterfall charts with opinionated defaults.</p>
+            <a href="#api-graphs" class="card-link">To the Graphs reference &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<section id="getting-started">
+    <div class="container">
+        <h2>Getting Started</h2>
+        <p>Install chartly and build your first interactive chart in minutes.</p>
+
+        <h3 id="installation">Installation</h3>
+        <div class="code-block"><pre>pip install git+https://github.com/gabenespoli/chartly.git</pre></div>
+
+        <h3 id="minimal-example">Minimal Example</h3>
+        <p>Give chartly a DataFrame, choose your fields, and set your defaults. Users can then
+        explore the data from many different angles in one interactive chart.</p>
+        <div class="code-block">
+<pre><span class="kw">from</span> chartly <span class="kw">import</span> Chart
+<span class="kw">import</span> polars <span class="kw">as</span> pl
+
+df = pl.<span class="fn">read_csv</span>(<span class="str">"sales.csv"</span>)
+
+chart = <span class="fn">Chart</span>(
+    id=<span class="str">"revenue"</span>,
+    data=df,
+    default_x=<span class="str">"Region"</span>,
+    default_y=<span class="str">"Revenue"</span>,
+    default_color=<span class="str">"Product"</span>,
+    default_graph_type=<span class="str">"bar"</span>,
+    colormaps={<span class="str">"Product"</span>: {<span class="str">"Widget"</span>: <span class="str">"#6366f1"</span>, <span class="str">"Gadget"</span>: <span class="str">"#22d3ee"</span>}},
+)
+chart.<span class="fn">update_figure</span>()
+chart.<span class="fn">show_figure</span>()</pre>
+        </div>
+
+        <h3 id="with-filters">With Filters</h3>
+        <div class="code-block">
+<pre><span class="kw">from</span> chartly <span class="kw">import</span> Chart, Filter, filter_data
+
+<span class="cm"># Build interactive filters</span>
+flt = <span class="fn">Filter</span>(id=<span class="str">"sidebar"</span>)
+flt.<span class="fn">multiselect</span>(<span class="str">"Region"</span>, options=[<span class="str">"North"</span>, <span class="str">"South"</span>, <span class="str">"East"</span>, <span class="str">"West"</span>])
+flt.<span class="fn">selectbox</span>(<span class="str">"Year"</span>, options=[2023, 2024, 2025], filter_type=<span class="str">"gte"</span>)
+
+<span class="cm"># Apply filters to data (cached automatically)</span>
+df_filtered = <span class="fn">filter_data</span>(df, flt)
+
+<span class="cm"># Render chart with all interactive controls</span>
+chart = <span class="fn">Chart</span>(id=<span class="str">"main"</span>, data=df_filtered, default_y=<span class="str">"Sales"</span>, default_x=<span class="str">"Month"</span>)
+chart.<span class="fn">update_figure</span>()
+chart.<span class="fn">show_figure</span>()</pre>
+        </div>
+
+        <h3 id="date-grouping">Date Grouping</h3>
+        <p>Chartly provides automatic date aggregation with a user-selectable grouping level.</p>
+        <div class="code-block">
+<pre><span class="cm"># Add a date grouping selector (Daily/Weekly/Monthly/Quarterly/Yearly)</span>
+chart = <span class="fn">Chart</span>(
+    id=<span class="str">"timeseries"</span>,
+    data=df,
+    date_col=<span class="str">"Order Date"</span>,
+    default_y=<span class="str">"Amount"</span>,
+    default_x=<span class="str">"DateGrouping"</span>,
+    default_color=<span class="str">"Category"</span>,
+)
+chart.<span class="fn">get_date_grouping</span>(default=<span class="str">"Monthly"</span>, default_min_num_periods=12)
+chart.<span class="fn">update_figure</span>()
+chart.<span class="fn">show_figure</span>()</pre>
+        </div>
+    </div>
+</section>
+
+<section id="api-chart">
+    <div class="container">
+        <h2>Chart</h2>
+        <p>The central interactive widget. Renders Streamlit controls and produces Plotly figures.</p>
+
+        <div class="api-grid">
+            <div class="api-card" id="chart-init">
+                <h4>Chart(id, data, ...)</h4>
+                <p>Initialize the chart with a DataFrame and display options. Automatically renders selector widgets for graph type, x, y, color, facets, size, bar mode, marginals, and height.</p>
+            </div>
+            <div class="api-card" id="chart-update-figure">
+                <h4>chart.update_figure(**kwargs)</h4>
+                <p>Build the Plotly figure based on current widget selections. Handles date grouping, aggregation, date range filtering, and dispatches to the correct graph type.</p>
+            </div>
+            <div class="api-card" id="chart-show-figure">
+                <h4>chart.show_figure(use_container_width=True)</h4>
+                <p>Display the figure in Streamlit via <code>st.plotly_chart()</code>.</p>
+            </div>
+            <div class="api-card" id="chart-get-date-grouping">
+                <h4>chart.get_date_grouping(default, ...)</h4>
+                <p>Render a date grouping selector (Daily through Yearly) and optional min/max date range filter.</p>
+            </div>
+            <div class="api-card" id="chart-show-data">
+                <h4>chart.show_data(raw_data, chart_data, map_data, ...)</h4>
+                <p>Show data tables in expandable sections below the chart for debugging and exploration.</p>
+            </div>
+            <div class="api-card" id="chart-group-by-date">
+                <h4>Chart.group_by_date(df, date_grouping, date_col, ...)</h4>
+                <p>Static method. Aggregate a DataFrame by time period, summing an <code>Amount</code> column. Adds a <code>DateGrouping</code> label column.</p>
+            </div>
+            <div class="api-card" id="chart-header">
+                <h4>Chart.header(title)</h4>
+                <p>Static method. Render a Streamlit header row with columns for title and selectors.</p>
+            </div>
+            <div class="api-card" id="chart-highlight">
+                <h4>chart.highlight_monthly_regions(grouping, min_date, max_date, ...)</h4>
+                <p>Add alternating background shading and period annotations to bar charts for visual grouping by year, quarter, or half-year.</p>
+            </div>
+        </div>
+
+        <h3 id="chart-params">Constructor Parameters</h3>
+        <table class="params">
+            <tr><th>Parameter</th><th>Description</th></tr>
+            <tr><td>id</td><td>Unique identifier for Streamlit widget keys</td></tr>
+            <tr><td>data</td><td>Polars or Pandas DataFrame to visualize</td></tr>
+            <tr><td>y_opts / x_opts</td><td>Column names for axis selectors (defaults to all columns)</td></tr>
+            <tr><td>color_opts</td><td>Columns for color/facet/size selectors</td></tr>
+            <tr><td>default_y</td><td>Default y-axis column</td></tr>
+            <tr><td>default_x</td><td>Default x-axis column</td></tr>
+            <tr><td>default_color</td><td>Default color-encoding column</td></tr>
+            <tr><td>default_graph_type</td><td>Default chart type (bar, line, scatter, donut, sunburst, map)</td></tr>
+            <tr><td>default_barmode</td><td>Bar mode: "grouped", "stacked", "overlaid", or "grouped+stacked"</td></tr>
+            <tr><td>default_facet_col / row</td><td>Default columns for faceted splits</td></tr>
+            <tr><td>default_size</td><td>Default column for marker/bubble size</td></tr>
+            <tr><td>default_marginal</td><td>Marginal plot type for scatter (box, histogram, rug, violin)</td></tr>
+            <tr><td>default_date_grouping</td><td>Default time aggregation level</td></tr>
+            <tr><td>default_height</td><td>Chart height in pixels</td></tr>
+            <tr><td>colormaps</td><td>Dict mapping column names to color dicts, e.g. <code>{"Status": {"Active": "green"}}</code></td></tr>
+            <tr><td>date_col</td><td>Datetime column for date grouping</td></tr>
+            <tr><td>map_hover_cols</td><td>Extra columns for map hover tooltips</td></tr>
+        </table>
+    </div>
+</section>
+
+<section id="api-filter">
+    <div class="container">
+        <h2>Filter</h2>
+        <p>Build reusable, cacheable filter UIs that apply to Polars DataFrames or generate SQL.</p>
+
+        <div class="api-grid">
+            <div class="api-card" id="filter-init">
+                <h4>Filter(id, filters=None, label_visibility="visible")</h4>
+                <p>Initialize a filter group with a unique ID.</p>
+            </div>
+            <div class="api-card" id="filter-selectbox">
+                <h4>flt.selectbox(label, options, default, col_name, filter_type, bypass_option, ...)</h4>
+                <p>Add a single-select filter. Supports comparison operators: eq, gte, lte, gt, lt. The <code>bypass_option</code> acts as an "All" selection that skips filtering.</p>
+            </div>
+            <div class="api-card" id="filter-multiselect">
+                <h4>flt.multiselect(label, options, default, col_name, ...)</h4>
+                <p>Add a multi-select filter. Rows are kept where the column value is in the selected list.</p>
+            </div>
+            <div class="api-card" id="filter-sql">
+                <h4>flt.filter_sql(where_or_and="WHERE", prefix="")</h4>
+                <p>Generate a SQL WHERE clause from active filter selections.</p>
+            </div>
+            <div class="api-card" id="filter-data">
+                <h4>filter_data(df, flt, names=None, return_size_too=False)</h4>
+                <p>Apply filter selections to a Polars DataFrame. Cached by Streamlit for performance. Optionally returns row counts after each filter step.</p>
+            </div>
+            <div class="api-card" id="combine-filters">
+                <h4>combine_filters(filter1, filter2)</h4>
+                <p>Merge two Filter objects into one, preferring non-empty values from the first filter.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="api-graphs">
+    <div class="container">
+        <h2>Graphs</h2>
+        <p>Low-level Plotly figure factories with opinionated defaults for common chart types.</p>
+
+        <div class="api-grid">
+            <div class="api-card" id="graphs-graph">
+                <h4>graphs.graph(df, graph_type="bar", ...)</h4>
+                <p>Create bar, line, or scatter figures. Supports grouped+stacked bars, auto-aggregation, legend sorting by value, color maps, and category ordering.</p>
+            </div>
+            <div class="api-card" id="graphs-donut">
+                <h4>graphs.donut(df, values, names, ...)</h4>
+                <p>Create donut/pie charts with percentage + value labels, optional faceting, and automatic color mapping.</p>
+            </div>
+            <div class="api-card" id="graphs-map">
+                <h4>graphs.map(df, size_col, color_col, map_theme, ...)</h4>
+                <p>Create scatter mapbox figures from lat/lon data with size and color encoding.</p>
+            </div>
+            <div class="api-card" id="graphs-sankey">
+                <h4>graphs.sankey(df, node1, node2, node0="Total", cmap=None)</h4>
+                <p>Create 3-level Sankey diagrams from DataFrame columns.</p>
+            </div>
+            <div class="api-card" id="graphs-sunburst">
+                <h4>graphs.sunburst(df, path, color, ...)</h4>
+                <p>Create sunburst charts for hierarchical data exploration.</p>
+            </div>
+            <div class="api-card" id="graphs-waterfall">
+                <h4>graphs.waterfall(sv1, n_top_features=9)</h4>
+                <p>Create horizontal waterfall plots, designed for SHAP value visualization.</p>
+            </div>
+            <div class="api-card" id="graphs-millify">
+                <h4>graphs.millify(n, precision=2)</h4>
+                <p>Format numbers with human-readable suffixes (k, M, B, T). Based on <a href="https://github.com/azaitsev/millify">azaitsev/millify</a>.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="api-utils">
+    <div class="container">
+        <h2>Utilities</h2>
+        <p>Helper functions used internally and available for convenience.</p>
+        <div class="api-grid">
+            <div class="api-card" id="utils-pl2pd">
+                <h4>utils.pl2pd(df)</h4>
+                <p>Convert a Polars DataFrame to Pandas, preserving date columns as <code>datetime.date</code> objects.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="container">
+        <p>Chartly &mdash; created by <a href="https://github.com/gabenespoli">Gabe Nespoli</a>.
+        Built with Plotly and Streamlit.</p>
+    </div>
+</footer>
+
+</div><!-- /.main -->
+</div><!-- /.page-layout -->
+
+<!-- Search modal -->
+<div class="search-overlay" id="search-overlay">
+    <div class="search-modal">
+        <div class="search-input-wrap">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M12.5 12.5L17 17"/></svg>
+            <input class="search-input" id="search-input" type="text" placeholder="Search documentation..." autocomplete="off" />
+        </div>
+        <div class="search-results" id="search-results"></div>
+        <div class="search-hint">
+            <span>&#8593;&#8595; Navigate</span>
+            <span>&#9166; Open</span>
+            <span>Esc Close</span>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Theme toggle
+    const toggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    const stored = localStorage.getItem('chartly-theme');
+    const theme = stored || 'dark';
+    html.setAttribute('data-theme', theme);
+    updateIcon(theme);
+
+    toggle.addEventListener('click', function() {
+        const current = html.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('chartly-theme', next);
+        updateIcon(next);
+    });
+
+    function updateIcon(t) {
+        toggle.innerHTML = t === 'dark' ? '&#9788;' : '&#9790;';
+    }
+
+    // Mobile sidebar toggle
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebar = document.getElementById('sidebar');
+    sidebarToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('open');
+    });
+
+    // Active sidebar link highlighting
+    const sidebarLinks = document.querySelectorAll('.sidebar-link');
+    const sections = document.querySelectorAll('section, .hero, [id]');
+
+    function updateActiveLink() {
+        let current = '';
+        document.querySelectorAll('[id]').forEach(function(el) {
+            if (el.getBoundingClientRect().top <= 100) {
+                current = el.id;
+            }
+        });
+        sidebarLinks.forEach(function(link) {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+                link.classList.add('active');
+            }
+        });
+    }
+    window.addEventListener('scroll', updateActiveLink, { passive: true });
+
+    // Search index
+    const searchItems = [
+        { title: 'Chart(id, data, ...)', desc: 'Initialize chart with DataFrame and options', href: '#chart-init' },
+        { title: 'chart.update_figure()', desc: 'Build Plotly figure from widget selections', href: '#chart-update-figure' },
+        { title: 'chart.show_figure()', desc: 'Display figure in Streamlit', href: '#chart-show-figure' },
+        { title: 'chart.get_date_grouping()', desc: 'Date grouping selector widget', href: '#chart-get-date-grouping' },
+        { title: 'chart.show_data()', desc: 'Show data tables below chart', href: '#chart-show-data' },
+        { title: 'Chart.group_by_date()', desc: 'Aggregate DataFrame by time period', href: '#chart-group-by-date' },
+        { title: 'Chart.header()', desc: 'Render Streamlit header row', href: '#chart-header' },
+        { title: 'chart.highlight_monthly_regions()', desc: 'Add alternating background shading', href: '#chart-highlight' },
+        { title: 'Filter(id, ...)', desc: 'Initialize a filter group', href: '#filter-init' },
+        { title: 'flt.selectbox()', desc: 'Single-select filter with comparison operators', href: '#filter-selectbox' },
+        { title: 'flt.multiselect()', desc: 'Multi-select filter for column values', href: '#filter-multiselect' },
+        { title: 'flt.filter_sql()', desc: 'Generate SQL WHERE clause', href: '#filter-sql' },
+        { title: 'filter_data()', desc: 'Apply filters to Polars DataFrame', href: '#filter-data' },
+        { title: 'combine_filters()', desc: 'Merge two Filter objects', href: '#combine-filters' },
+        { title: 'graphs.graph()', desc: 'Bar, line, or scatter figures', href: '#graphs-graph' },
+        { title: 'graphs.donut()', desc: 'Donut/pie charts', href: '#graphs-donut' },
+        { title: 'graphs.map()', desc: 'Scatter mapbox figures', href: '#graphs-map' },
+        { title: 'graphs.sankey()', desc: '3-level Sankey diagrams', href: '#graphs-sankey' },
+        { title: 'graphs.sunburst()', desc: 'Sunburst hierarchical charts', href: '#graphs-sunburst' },
+        { title: 'graphs.waterfall()', desc: 'Horizontal waterfall plots (SHAP)', href: '#graphs-waterfall' },
+        { title: 'graphs.millify()', desc: 'Human-readable number formatting', href: '#graphs-millify' },
+        { title: 'utils.pl2pd()', desc: 'Convert Polars to Pandas DataFrame', href: '#utils-pl2pd' },
+        { title: 'Getting Started', desc: 'Installation and first chart', href: '#getting-started' },
+        { title: 'Constructor Parameters', desc: 'All Chart init parameters', href: '#chart-params' },
+    ];
+
+    // Search functionality
+    const overlay = document.getElementById('search-overlay');
+    const input = document.getElementById('search-input');
+    const results = document.getElementById('search-results');
+    const searchBtn = document.getElementById('search-btn');
+    let activeIdx = -1;
+
+    function openSearch() {
+        overlay.classList.add('open');
+        input.value = '';
+        input.focus();
+        renderResults(searchItems);
+        activeIdx = -1;
+    }
+    function closeSearch() {
+        overlay.classList.remove('open');
+    }
+
+    searchBtn.addEventListener('click', openSearch);
+
+    document.addEventListener('keydown', function(e) {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            if (overlay.classList.contains('open')) closeSearch();
+            else openSearch();
+        }
+        if (!overlay.classList.contains('open')) return;
+        if (e.key === 'Escape') { closeSearch(); return; }
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIdx = Math.min(activeIdx + 1, results.children.length - 1);
+            updateActive();
+        }
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIdx = Math.max(activeIdx - 1, 0);
+            updateActive();
+        }
+        if (e.key === 'Enter' && activeIdx >= 0) {
+            e.preventDefault();
+            results.children[activeIdx].click();
+        }
+    });
+
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeSearch();
+    });
+
+    input.addEventListener('input', function() {
+        const q = input.value.toLowerCase().trim();
+        if (!q) { renderResults(searchItems); activeIdx = -1; return; }
+        const filtered = searchItems.filter(function(item) {
+            return item.title.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
+        });
+        renderResults(filtered);
+        activeIdx = filtered.length > 0 ? 0 : -1;
+        updateActive();
+    });
+
+    function renderResults(items) {
+        if (items.length === 0) {
+            results.innerHTML = '<div class="search-empty">No results found</div>';
+            return;
+        }
+        results.innerHTML = items.map(function(item, i) {
+            return '<a class="search-result" href="' + item.href + '">' +
+                '<div class="search-result-title">' + item.title + '</div>' +
+                '<div class="search-result-desc">' + item.desc + '</div></a>';
+        }).join('');
+        results.querySelectorAll('.search-result').forEach(function(el) {
+            el.addEventListener('click', closeSearch);
+        });
+    }
+
+    function updateActive() {
+        Array.from(results.children).forEach(function(el, i) {
+            el.classList.toggle('active', i === activeIdx);
+        });
+        if (activeIdx >= 0 && results.children[activeIdx]) {
+            results.children[activeIdx].scrollIntoView({ block: 'nearest' });
+        }
+    }
+})();
+</script>
+</body>
+</html>

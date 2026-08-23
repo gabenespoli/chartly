@@ -1,3 +1,10 @@
+"""Interactive filter widgets for Streamlit apps with Polars DataFrame support.
+
+This module provides the :class:`Filter` class for building reusable,
+cacheable filter UIs in Streamlit. Filters can be applied to Polars
+DataFrames via :func:`filter_data` or converted to SQL WHERE clauses.
+"""
+
 from typing import Any
 from typing import Dict
 from typing import List
@@ -14,6 +21,19 @@ from chartly import utils
 
 
 class Filter:
+    """A collection of interactive Streamlit filter widgets.
+
+    Create a ``Filter``, add selectbox or multiselect widgets, then apply
+    the filter to a DataFrame using :func:`filter_data` or generate SQL
+    with :meth:`filter_sql`.
+
+    Example:
+        >>> from chartly import Filter, filter_data
+        >>> flt = Filter(id="my_filters")
+        >>> flt.multiselect("Region", options=["North", "South", "East", "West"])
+        >>> filtered_df = filter_data(df, flt)
+    """
+
     def __init__(
         self,
         id: str,
@@ -46,8 +66,21 @@ class Filter:
         bypass_option: Any = None,
         **kwargs: Any,
     ) -> None:
-        """Add a filter to the self.filters dictionary using a streamlit selectbox
-        widget."""
+        """Add a single-select filter using a Streamlit selectbox widget.
+
+        Args:
+            label: Display label for the widget (also used as the filter key).
+            options: List of selectable values.
+            default: Default selected value. Defaults to the first option.
+            col_name: DataFrame column name to filter on. Defaults to ``label``.
+            placeholder: Placeholder text when no value is selected.
+            label_visibility: Streamlit label visibility ("visible", "collapsed",
+                "hidden").
+            filter_type: Comparison operator — "eq", "gte", "lte", "gt", or "lt".
+            bypass_option: If the selected value equals this, the filter is
+                skipped (acts as an "All" option).
+            **kwargs: Additional arguments passed to ``st.selectbox()``.
+        """
         if default is None:
             default = options[0]
         self.col_names[label] = col_name or label
@@ -74,8 +107,21 @@ class Filter:
         label_visibility: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
-        """Add a filter to the self.filters dictionary using a streamlit multiselect
-        widget."""
+        """Add a multi-select filter using a Streamlit multiselect widget.
+
+        When values are selected, :func:`filter_data` will keep only rows
+        where the column value is in the selected list.
+
+        Args:
+            label: Display label for the widget (also used as the filter key).
+            options: List of selectable values.
+            default: Default selected values. Defaults to empty (no filter).
+            col_name: DataFrame column name to filter on. Defaults to ``label``.
+            placeholder: Placeholder text when no values are selected.
+            label_visibility: Streamlit label visibility ("visible", "collapsed",
+                "hidden").
+            **kwargs: Additional arguments passed to ``st.multiselect()``.
+        """
         if default is None:
             default = []
         self.col_names[label] = col_name or label
@@ -120,6 +166,19 @@ class Filter:
         return "('" + "','".join(escaped) + "')"
 
     def filter_sql(self, where_or_and: str = "WHERE", prefix: str = "") -> str:
+        """Generate a SQL WHERE clause from the active filter selections.
+
+        Only filters with non-empty selections are included. Each filter
+        becomes a ``column IN (...)`` condition joined by ``AND``.
+
+        Args:
+            where_or_and: SQL keyword to prepend ("WHERE" or "AND").
+            prefix: Optional table alias prefix (e.g., "t" becomes "t.column").
+
+        Returns:
+            A SQL string like ``WHERE col1 IN ('a','b') AND col2 IN ('x')``,
+            or an empty string if no filters are active.
+        """
         # Make sure prefix has a trailing dot
         if prefix is not None and prefix != "":
             prefix = prefix + "." if prefix[-1] != "." else prefix
@@ -139,6 +198,15 @@ class Filter:
 
 
 def filter_hash(obj: Filter) -> str:
+    """Hash function for Streamlit caching of Filter objects.
+
+    Args:
+        obj: A Filter instance.
+
+    Returns:
+        The SQL representation of the filter state, used as a cache key.
+    """
+    return obj.filter_sql()
     return obj.filter_sql()
 
 
@@ -188,13 +256,29 @@ def filter_data(
     names: Optional[Union[str, List[str]]] = None,
     return_size_too: bool = False,
 ) -> Union[pl.DataFrame, Tuple[pl.DataFrame, Dict[str, int]]]:
-    """
-    names: A subset of filter keys to filter.
-    return_size_too: If True, return a tuple with first the filtered dataframe, and
-        second a dataframe showing the count of rows after each filter step.
-        Boolean flag kept deliberately: callers rely on st.cache_data hashing this
-        exact call shape; splitting it in two would change cache keys. Revisit only
-        on a major version bump.
+    """Apply a Filter's selections to a DataFrame (cached).
+
+    Iterates through the filter's active selections and progressively
+    filters the DataFrame. Results are cached by Streamlit to avoid
+    redundant computation on reruns.
+
+    Args:
+        df: The source DataFrame (Pandas or Polars) to filter. Converted to
+            Polars internally.
+        flt: A :class:`Filter` instance with active selections.
+        names: Subset of filter keys to apply. If None, all filters are applied.
+            Can be a single string or list of strings.
+        return_size_too: If True, also return a dictionary mapping each filter
+            step name to the row count after that step.
+
+    Returns:
+        The filtered Polars DataFrame, or a tuple of (filtered DataFrame,
+        size dict) if ``return_size_too`` is True.
+
+    Note:
+        ``return_size_too`` is kept as a boolean flag deliberately: callers
+        rely on st.cache_data hashing this exact call shape; splitting it in
+        two would change cache keys. Revisit only on a major version bump.
     """
     df = utils.ensure_polars(df)
     df_size = {"Total": df.shape[0]}

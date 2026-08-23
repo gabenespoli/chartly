@@ -1,4 +1,10 @@
-"""
+"""Chartly: Interactive multi-perspective chart exploration for Streamlit.
+
+Chartly wraps Plotly and Streamlit to let you hand it a DataFrame, choose
+your fields, set sensible defaults, and instantly explore your data from
+many angles — bar, line, scatter, donut, sunburst, map, sankey, and
+waterfall — all in one configurable chart widget.
+
 .. include:: ../README.md
 """
 
@@ -9,9 +15,9 @@ from chartly.filter import Filter
 from chartly.filter import filter_data
 
 __all__ = [
-    "Chart",  # class
-    "Filter",  # class
-    "filter",  # module
-    "filter_data",  # function
-    "graphs",  # module
+    "Chart",
+    "Filter",
+    "filter",
+    "filter_data",
+    "graphs",
 ]
