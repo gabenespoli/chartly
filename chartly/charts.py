@@ -713,7 +713,7 @@ class Chart:
             Updates self.fig with vrects and annotations for each period.
         """
         if self.graph_type != "bar":
-            pass
+            return
 
         # get periods (list of dicts)
         # ---------------------------
