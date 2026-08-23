@@ -29,10 +29,10 @@ def test_category_orders_alphabetical_polars(df_polars):
     assert list(fig.layout.xaxis.categoryarray) == ["a", "b", "c"]
 
 
-def test_unsortable_column_skips_ordering(capsys):
+def test_unsortable_column_skips_ordering():
     df = pd.DataFrame({"cat": ["a", 1, "b"], "val": [1, 2, 3]})
-    graphs.graph(df, x="cat", y="val")
-    assert "unsortable" in capsys.readouterr().out.lower()
+    with pytest.warns(UserWarning, match="unsortable"):
+        graphs.graph(df, x="cat", y="val")
 
 
 def test_text_auto_enabled_by_default(df_pandas):

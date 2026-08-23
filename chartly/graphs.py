@@ -6,6 +6,7 @@ from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Union
+import warnings
 
 import pandas as pd
 import plotly.express as px
@@ -77,8 +78,10 @@ def _add_category_orders(
                         # unique() may return an ArrowStringArray without .sort()
                         category_orders[col_name] = sorted(df[col_name].unique())
                 except TypeError:
-                    print("Column contains unsortable types (e.g., mixed types); skip ordering")
-                    pass
+                    warnings.warn(
+                        f"Column {col_name!r} contains unsortable types (e.g., mixed"
+                        " types); skipping category ordering"
+                    )
     kwargs["category_orders"] = category_orders
     return kwargs
 
