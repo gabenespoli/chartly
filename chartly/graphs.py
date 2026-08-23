@@ -759,6 +759,9 @@ def sankey(
 
 
 def sunburst(df: Union[pd.DataFrame, pl.DataFrame], **kwargs: Any) -> go.Figure:
+    # Pure passthrough of px.sunburst. Kept deliberately as a stable seam so
+    # callers can treat graph/donut/sunburst uniformly; revisit if the package
+    # ever cuts a major version.
     fig = px.sunburst(df, **kwargs)
     return fig
 
