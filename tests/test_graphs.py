@@ -113,3 +113,16 @@ def test_grouped_stacked_bar_characterization():
         ("b", True, [-0.2, 0.8], [5, 3], "#EF553B"),
         ("b", False, [0.2, 1.2], [1, 9], "#EF553B"),
     ]
+
+
+def test_add_category_orders_does_not_mutate_kwargs(df_pandas):
+    kwargs = {"x": "cat"}
+    out = graphs._add_category_orders(df_pandas, ["x"], kwargs)
+    assert "category_orders" not in kwargs
+    assert out["category_orders"]["cat"] == ["a", "b", "c"]
+
+
+def test_add_category_orders_preserves_user_order(df_pandas):
+    kwargs = {"x": "cat", "category_orders": {"cat": ["c", "a", "b"]}}
+    out = graphs._add_category_orders(df_pandas, ["x"], kwargs)
+    assert out["category_orders"]["cat"] == ["c", "a", "b"]

@@ -53,19 +53,20 @@ def _add_category_orders(
 ) -> Dict[str, Any]:
     """Set category orders based on the order in the color map.
     Otherwise sort the values alphabetically.
+
+    Returns a new dict; the input kwargs is not mutated.
     """
-    category_orders = {}
     colormaps = colormaps or {}
+    existing_orders = kwargs.get("category_orders") or {}
+    category_orders = {}
     for plot_var in plot_vars:
         col_name = kwargs.get(plot_var)
         if col_name is not None:
+            if col_name in existing_orders:
+                category_orders[col_name] = existing_orders[col_name]
+                continue
             colormap = colormaps.get(col_name)
-            if (
-                "category_orders" in kwargs.keys()
-                and col_name in kwargs["category_orders"]
-            ):
-                category_orders[col_name] = kwargs["category_orders"][col_name]
-            elif colormap is not None and colormap != {}:
+            if colormap:
                 category_orders[col_name] = [
                     x for x in colormap.keys() if x in df[col_name].unique()
                 ]
@@ -82,8 +83,7 @@ def _add_category_orders(
                         f"Column {col_name!r} contains unsortable types (e.g., mixed"
                         " types); skipping category ordering"
                     )
-    kwargs["category_orders"] = category_orders
-    return kwargs
+    return {**kwargs, "category_orders": category_orders}
 
 
 def _get_height(df: Union[pd.DataFrame, pl.DataFrame], kwargs: Dict[str, Any]) -> int:
