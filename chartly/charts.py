@@ -597,8 +597,7 @@ class Chart:
             ]
             path = list(set(path))
             colormaps = colormaps or self.colormaps
-            if colormaps:
-                color_discrete_map = colormaps.get(self.color)
+            color_discrete_map = colormaps.get(self.color) if colormaps else None
             self.fig = graphs.sunburst(
                 df,
                 path=path,
