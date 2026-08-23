@@ -126,3 +126,16 @@ def test_add_category_orders_preserves_user_order(df_pandas):
     kwargs = {"x": "cat", "category_orders": {"cat": ["c", "a", "b"]}}
     out = graphs._add_category_orders(df_pandas, ["x"], kwargs)
     assert out["category_orders"]["cat"] == ["c", "a", "b"]
+
+
+def test_sankey_builds_links_and_drops_zero_flows():
+    df = pd.DataFrame({"stage1": ["a", "a", "b"], "stage2": ["x", "y", "y"]})
+    fig = graphs.sankey(df, node1="stage1", node2="stage2")
+    link = fig.data[0].link
+    labels = [label.split(" (")[0] for label in fig.data[0].node.label]
+    triples = {
+        (labels[s], labels[t], v)
+        for s, t, v in zip(link.source, link.target, link.value)
+    }
+    # b -> x has zero rows and must be dropped
+    assert triples == {("Total", "a", 2), ("Total", "b", 1), ("a", "x", 1), ("a", "y", 1), ("b", "y", 1)}

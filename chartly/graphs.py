@@ -699,7 +699,7 @@ def sankey(
     """
     # Get nodes
     labels = {
-        "Total Accounts": len(df),
+        node0: len(df),
         **{x: sum(df[node1] == x) for x in list(df[node1].unique())},
         **{x: sum(df[node2] == x) for x in list(df[node2].unique())},
     }
