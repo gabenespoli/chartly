@@ -234,7 +234,10 @@ class Chart:
         elif self.date_grouping == "Weekly":
             fmt = "%G-W%V"
         elif self.date_grouping == "Bi-Weekly":
-            fmt = "%Y-W%V-B1"
+            # Bi-weekly buckets are computed manually below so both engines
+            # label rows by the odd ISO week that starts their 2-week bucket;
+            # fmt stays unused
+            fmt = None
         elif self.date_grouping == "Monthly":
             fmt = "%Y-%m"
         elif self.date_grouping == "Quarterly":
@@ -265,7 +268,12 @@ class Chart:
                     pl.col(self.date_col).dt.strftime(fmt).alias("DateGrouping")
                 )
         elif isinstance(self.data, pd.DataFrame):
-            if self.date_grouping == "Quarterly":
+            if self.date_grouping == "Bi-Weekly":
+                iso = self.data[self.date_col].dt.isocalendar()
+                year = iso["year"].astype(str)
+                bi_week = ((iso["week"] - 1) // 2 * 2 + 1).astype(str).str.zfill(2)
+                self.data["DateGrouping"] = year + "-W" + bi_week
+            elif self.date_grouping == "Quarterly":
                 quarter = (self.data[self.date_col].dt.month - 1) // 3 + 1
                 year = self.data[self.date_col].dt.year.astype(str)
                 self.data["DateGrouping"] = year + "-Q" + quarter.astype(str)

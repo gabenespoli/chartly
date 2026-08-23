@@ -128,6 +128,25 @@ def test_biweekly_labels_use_iso_year_polars(iso_boundary_df):
     assert list(chart.data["DateGrouping"]) == ["2026-W53", "2026-W53"]
 
 
+def test_biweekly_labels_match_between_engines():
+    df_pd = pd.DataFrame(
+        {
+            "Datetime": pd.to_datetime(["2026-12-22", "2026-12-30"]),
+            "Amount": [1, 2],
+        }
+    )
+    stub = make_pandas_chart_stub(df_pd)
+    stub.date_grouping = "Bi-Weekly"
+    Chart.add_date_grouping_column(stub)
+    df_pl = pl.from_pandas(df_pd)
+    chart = Chart(id="bwx", data=df_pl, date_col="Datetime")
+    chart.date_grouping = "Bi-Weekly"
+    chart.add_date_grouping_column()
+    # Week 52 is even, so it belongs to the bucket starting at odd week 51
+    assert list(stub.data["DateGrouping"]) == ["2026-W51", "2026-W53"]
+    assert list(stub.data["DateGrouping"]) == list(chart.data["DateGrouping"])
+
+
 def test_add_date_grouping_column_quarterly_pandas(iso_boundary_df):
     df = pd.DataFrame(
         {
