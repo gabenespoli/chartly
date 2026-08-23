@@ -278,9 +278,6 @@ def _grouped_stacked_bar(
 def graph(
     df: Union[pd.DataFrame, pl.DataFrame],
     legend_reversed: bool = False,
-    # legend_bottom: bool = False,
-    # showlegend: bool = True,
-    # sort: bool = False,
     legend_hide_title: bool = True,
     font_size: int = FONT_SIZE,
     text_auto: Optional[Union[str, bool]] = None,
@@ -439,14 +436,8 @@ def graph(
     if graph_type == "line":
         fig.update_traces(dict(mode="lines+markers"))
 
-    # fig.update_traces(
-    #     textposition="inside",
-    # )
-
     fig.update_layout(
         font=dict(size=font_size),
-        # uniformtext=dict(minsize=14),
-        # paper_bgcolor="rgba(0, 0, 0, 0)",
         legend=dict(
             font=dict(size=font_size),
             traceorder="reversed" if legend_reversed else None,
@@ -513,16 +504,11 @@ def donut(
     fig.update_layout(height=_get_height(df, kwargs))
 
     fig.update_traces(
-        # insidetextorientation="radial",
-        # textinfo="percent",
         texttemplate="%{percent:.0%} (%{value})",
         textposition="inside",
         textfont=dict(size=font_size),
-        # rotation=90,
         sort=sort,  # True to sort by size, False to sort as in df
         direction="clockwise",
-        # hovertemplate=None,
-        # hoverinfo="skip",
         showlegend=showlegend,
     )
 
@@ -560,24 +546,18 @@ def get_geo_info(country: Optional[str]) -> Dict[str, Any]:
             scope="north america",
             center={"lat": 60, "lon": -98},
             zoom=2,
-            # lataxis_range=[48, 57],
-            # lonaxis_range=[-140, -30],
             resolution=50,
         ),
         "DE": dict(
             scope="europe",
             center={"lat": 51.5, "lon": 10},
             zoom=4,
-            # lataxis_range=[48, 56],  # north-south
-            # lonaxis_range=[6, 16],  # east-west
             resolution=50,
         ),
         "FR": dict(
             scope="europe",
             center={"lat": 47.5, "lon": 1},
             zoom=4,
-            # lataxis_range=[48, 56],  # north-south
-            # lonaxis_range=[6, 16],  # east-west
             resolution=50,
         ),
         "US": dict(
@@ -589,24 +569,18 @@ def get_geo_info(country: Optional[str]) -> Dict[str, Any]:
             scope="europe",
             center={"lat": 54.5, "lon": -3},
             zoom=4,
-            # lataxis_range=[49, 61],
-            # lonaxis_range=[-12, 3],
             resolution=50,
         ),
         "IE": dict(
             scope="europe",
             center={"lat": 54.5, "lon": -3},
             zoom=4,
-            # lataxis_range=[49, 61],
-            # lonaxis_range=[-12, 3],
             resolution=50,
         ),
         "UK/IE": dict(
             scope="europe",
             center={"lat": 54.5, "lon": -3},
             zoom=4,
-            # lataxis_range=[49, 61],
-            # lonaxis_range=[-12, 3],
             resolution=50,
         ),
         "NA": dict(
@@ -618,8 +592,6 @@ def get_geo_info(country: Optional[str]) -> Dict[str, Any]:
             scope="world",
             center={"lat": 43, "lon": -60},
             zoom=1,
-            # lataxis_range=[20, 67],
-            # lonaxis_range=[-150, 30],
             resolution=50,
             showcountries=True,
         ),
