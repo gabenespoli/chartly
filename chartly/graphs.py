@@ -714,35 +714,20 @@ def sankey(
     nodes = nodes.rename(columns={"index": "node"})
     node_list = nodes["node"].to_list()
 
-    def add_link(
-        links: pd.DataFrame,
-        source: str,
-        target: str,
-        value: int,
-    ) -> pd.DataFrame:
-        row = dict()
-        row["source"] = source
-        row["target"] = target
-        row["value"] = value
-        row = pd.DataFrame.from_dict({k: [v] for k, v in row.items()})
-        return pd.concat([links, row])
-
     # Define links between nodes
-    links = pd.DataFrame()
+    rows = []
     for n1 in df[node1].unique():
-        links = add_link(
-            links,
-            source=node0,
-            target=n1,
-            value=len(df[df[node1] == n1]),
-        )
+        df_n1 = df[df[node1] == n1]
+        rows.append({"source": node0, "target": n1, "value": len(df_n1)})
         for n2 in df[node2].unique():
-            links = add_link(
-                links,
-                source=n1,
-                target=n2,
-                value=len(df[(df[node1] == n1) & (df[node2] == n2)]),
+            rows.append(
+                {
+                    "source": n1,
+                    "target": n2,
+                    "value": int((df_n1[node2] == n2).sum()),
+                }
             )
+    links = pd.DataFrame(rows)
     links = links[links["value"] != 0]
     links = links.reset_index(drop=True)
 
