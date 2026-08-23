@@ -70,7 +70,12 @@ def _add_category_orders(
                 ]
             else:
                 try:
-                    category_orders[col_name] = df[col_name].unique().sort()
+                    if isinstance(df, pl.DataFrame):
+                        category_orders[col_name] = df[col_name].unique().sort()
+                    else:
+                        # ndarray.sort() sorts in place and returns None, and pandas 3
+                        # unique() may return an ArrowStringArray without .sort()
+                        category_orders[col_name] = sorted(df[col_name].unique())
                 except TypeError:
                     print("Column contains unsortable types (e.g., mixed types); skip ordering")
                     pass
