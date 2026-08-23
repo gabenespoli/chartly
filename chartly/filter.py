@@ -100,6 +100,9 @@ class Filter:
     def list(items: List[str]) -> str:
         """Takes a python list and returns a SQL list.
 
+        Single quotes inside values are escaped by doubling so they cannot break
+        out of the quoted literal.
+
         Args:
             items: A python list.
 
@@ -113,7 +116,8 @@ class Filter:
             select * from table where col in ('a','b','c')
 
         """
-        return "('" + "','".join(items) + "')"
+        escaped = [item.replace("'", "''") for item in items]
+        return "('" + "','".join(escaped) + "')"
 
     def filter_sql(self, where_or_and: str = "WHERE", prefix: str = "") -> str:
         # Make sure prefix has a trailing dot

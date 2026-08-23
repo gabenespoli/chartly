@@ -39,3 +39,11 @@ def test_multiselect_default_applied_when_no_selection(monkeypatch):
     f = make_filter()
     f.multiselect(label="Region", options=["a", "b"], default=["a"])
     assert f.filters["Region"] == ["a"]
+
+
+def test_list_builds_sql_list():
+    assert Filter.list(["a", "b", "c"]) == "('a','b','c')"
+
+
+def test_list_escapes_single_quotes():
+    assert Filter.list(["o'brien", "smith"]) == "('o''brien','smith')"
