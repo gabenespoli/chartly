@@ -94,7 +94,7 @@ def _get_height(df: pl.DataFrame, kwargs: Dict[str, Any]) -> int:
 
 
 def _grouped_stacked_bar(
-    df: Union[pd.DataFrame, pl.DataFrame],
+    df: pl.DataFrame,
     x_col: Optional[str],
     y_col: Optional[str],
     value_col: Optional[str],
@@ -112,15 +112,12 @@ def _grouped_stacked_bar(
     Note: more than four parameters because this mirrors the resolved plot spec
     of graph(); revisit if this signature keeps growing.
     """
-    if isinstance(df, pl.DataFrame):
-        df = df.to_pandas()
-
-    df = df.sort_values(by=x_col)
+    df = df.sort(x_col)
 
     fig = go.Figure()
 
     # Assign consistent colors per stack value
-    stack_values = sorted(df[stack_col].unique())
+    stack_values = sorted(df[stack_col].unique().to_list())
     colors_palette = px.colors.qualitative.Plotly
     color_map = colormaps.get(stack_col, {}) if stack_col else {}
     if not color_map:
@@ -129,57 +126,54 @@ def _grouped_stacked_bar(
             for i, val in enumerate(stack_values)
         }
 
-    # Calculate totals for sorting legend by value
-    # Handle case where bar_group_col and stack_col are the same
+    # Totals per (bar_group, stack) pair; when both come from the same column
+    # the pair is (value, value). Tertiary sort keys reproduce pandas' sorted
+    # groupby order so trace ordering is unchanged.
     if bar_group_col == stack_col:
-        stack_totals = df.groupby(stack_col)[value_col].sum()
+        totals = (
+            df.group_by(stack_col)
+            .agg(col(value_col).sum())
+            .rename({stack_col: "_group"})
+            .with_columns(col("_group").alias("_stack"))
+            .select(["_group", "_stack", value_col])
+        )
     else:
-        stack_totals = df.groupby([bar_group_col, stack_col])[value_col].sum()
+        totals = (
+            df.group_by([bar_group_col, stack_col])
+            .agg(col(value_col).sum())
+            .rename({bar_group_col: "_group", stack_col: "_stack"})
+        )
+    rows = totals.rows(named=True)
 
     if sort_legend_by_value:
         if bar_group_col == stack_col:
             # When same column, just sort by value descending
-            sorted_combinations = [
-                (val, val) for val in stack_totals.sort_values(ascending=False).index
-            ]
+            ordered = sorted(rows, key=lambda r: (-float(r[value_col]), r["_stack"]))
+            sorted_combinations = [(r["_stack"], r["_stack"]) for r in ordered]
         else:
             # Sort by bar_group first (ascending), then by value descending
-            df_sort = stack_totals.reset_index()
-            df_sort = df_sort.sort_values(
-                by=[bar_group_col, value_col], ascending=[True, False]
+            ordered = sorted(
+                rows,
+                key=lambda r: (r["_group"], -float(r[value_col]), r["_stack"]),
             )
-            sorted_combinations = list(zip(df_sort[bar_group_col], df_sort[stack_col]))
+            sorted_combinations = [(r["_group"], r["_stack"]) for r in ordered]
 
         # Create legend names with values
-        if bar_group_col == stack_col:
-            legend_name_map = {
-                (val, val): f"{val} ({millify(tot)})"
-                for val, tot in stack_totals.items()
-            }
-        else:
-            legend_name_map = {
-                (grp_val, stack_val): f"{stack_val} ({millify(tot)})"
-                for (grp_val, stack_val), tot in stack_totals.items()
-            }
+        legend_name_map = {
+            (r["_group"], r["_stack"]): f"{r['_stack']} ({millify(r[value_col])})"
+            for r in rows
+        }
     else:
         # Default: sort by stack_col only
-        if bar_group_col == stack_col:
-            sorted_combinations = [(val, val) for val in sorted(stack_totals.index)]
-            legend_name_map = {(val, val): str(val) for val in stack_totals.index}
-        else:
-            sorted_combinations = sorted(
-                stack_totals.index.tolist(), key=lambda x: x[1]
-            )
-            legend_name_map = {
-                (grp_val, stack_val): str(stack_val)
-                for grp_val, stack_val in stack_totals.index
-            }
+        ordered = sorted(rows, key=lambda r: (r["_stack"], r["_group"]))
+        sorted_combinations = [(r["_group"], r["_stack"]) for r in ordered]
+        legend_name_map = {(r["_group"], r["_stack"]): str(r["_stack"]) for r in rows}
 
     shown_in_legend = set()
 
     # Create numeric positions
-    unique_x = sorted(df[x_col].unique())
-    unique_bar_groups = sorted(df[bar_group_col].unique())
+    unique_x = sorted(df[x_col].unique().to_list())
+    unique_bar_groups = sorted(df[bar_group_col].unique().to_list())
     num_bar_groups = len(unique_bar_groups)
 
     # Create position map: {x_val: numeric_position}
@@ -200,7 +194,9 @@ def _grouped_stacked_bar(
             x_bar_pos[(x_val, grp)] = base_pos + bar_group_offsets[grp]
 
     for grp_val, stack_val in sorted_combinations:
-        group_df = df[(df[bar_group_col] == grp_val) & (df[stack_col] == stack_val)]
+        group_df = df.filter(
+            (col(bar_group_col) == grp_val) & (col(stack_col) == stack_val)
+        )
         name = legend_name_map[(grp_val, stack_val)]
         show_legend = stack_val not in shown_in_legend
         if show_legend:
@@ -236,8 +232,8 @@ def _grouped_stacked_bar(
 
     # Calculate total for each (x, bar_group) and add labels at top of each bar
     if text_auto:
-        totals = df.groupby([x_col, bar_group_col])[value_col].sum()
-        for (x_val, grp_val), total in totals.items():
+        totals = df.group_by([x_col, bar_group_col]).agg(col(value_col).sum())
+        for x_val, grp_val, total in totals.iter_rows():
             x_pos = x_bar_pos[(x_val, grp_val)]
             if orientation == "h":
                 fig.add_annotation(

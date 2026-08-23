@@ -120,6 +120,24 @@ def test_grouped_stacked_bar_characterization():
     ]
 
 
+def test_grouped_stacked_bar_sort_legend_by_value():
+    fig = graphs.graph(
+        make_grouped_stacked_df(),
+        x="month",
+        y="val",
+        color="segment",
+        bar_group="region",
+        barmode="stack",
+        graph_type="bar",
+        sort_legend_by_value=True,
+    )
+    assert len(fig.data) == 4
+    # combinations are group-major, so both stacks debut in the first group
+    assert [t.showlegend for t in fig.data] == [True, True, False, False]
+    # legend names carry the millified per-group total
+    assert all(t.name.endswith(")") and " (" in t.name for t in fig.data)
+
+
 from chartly import graphs
 from chartly import utils as graph_utils
 
