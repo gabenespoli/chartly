@@ -50,6 +50,14 @@ PERIOD_DATE_FORMATS = {
     "Yearly": "%Y",
 }
 
+# Columns referenced by name inside aggregations and filters
+AMOUNT_COL = "Amount"
+MONTH_COL = "Month"
+DATE_GROUPING_COL = "DateGrouping"
+
+# Legacy axis column names for which horizontal bars are disabled
+HORIZONTAL_BAR_BLOCKED_COLS = ("Date", "Month")
+
 
 def _pandas_date_grouping_column(
     df: pd.DataFrame, date_col: str, date_grouping: Optional[str]
@@ -193,10 +201,10 @@ class Chart:
             if grp_col is not None:
                 grp = grp + [grp_col]
             grp = grp + extra_grp_cols
-            df = df.groupby(grp)["Amount"].sum().reset_index()
+            df = df.groupby(grp)[AMOUNT_COL].sum().reset_index()
             if date_col in df.columns:
                 # Bucket end timestamps carry the period label
-                df["DateGrouping"] = _pandas_date_grouping_column(
+                df[DATE_GROUPING_COL] = _pandas_date_grouping_column(
                     df, date_col, date_grouping
                 )
         elif isinstance(df, pl.DataFrame):
@@ -207,9 +215,9 @@ class Chart:
                 date_col,
                 every=DATE_GROUPING_MAP[date_grouping],
                 group_by=all_grp_cols if all_grp_cols else None,
-            ).agg(col("Amount").sum())
+            ).agg(col(AMOUNT_COL).sum())
             df = df.with_columns(
-                _polars_date_grouping_column(date_col, date_grouping).alias("DateGrouping")
+                _polars_date_grouping_column(date_col, date_grouping).alias(DATE_GROUPING_COL)
             )
         return df
 
@@ -238,10 +246,10 @@ class Chart:
             ref = default_max
             if ref is None:
                 # Use latest available value from data
-                if isinstance(self.data, pl.DataFrame) and "DateGrouping" in self.data.columns:
-                    ref = sorted(self.data["DateGrouping"].unique().to_list())[-1]
-                elif isinstance(self.data, pd.DataFrame) and "DateGrouping" in self.data.columns:
-                    ref = sorted(self.data["DateGrouping"].unique().tolist())[-1]
+                if isinstance(self.data, pl.DataFrame) and DATE_GROUPING_COL in self.data.columns:
+                    ref = sorted(self.data[DATE_GROUPING_COL].unique().to_list())[-1]
+                elif isinstance(self.data, pd.DataFrame) and DATE_GROUPING_COL in self.data.columns:
+                    ref = sorted(self.data[DATE_GROUPING_COL].unique().tolist())[-1]
             if ref is not None:
                 default_min = self.get_period_offset(ref, default_min_num_periods)
         self.get_date_range_filter(default_min=default_min, default_max=default_max)
@@ -254,10 +262,10 @@ class Chart:
             self.data = self.data.with_columns(
                 _polars_date_grouping_column(
                     self.date_col, self.date_grouping
-                ).alias("DateGrouping")
+                ).alias(DATE_GROUPING_COL)
             )
         elif isinstance(self.data, pd.DataFrame):
-            self.data["DateGrouping"] = _pandas_date_grouping_column(
+            self.data[DATE_GROUPING_COL] = _pandas_date_grouping_column(
                 self.data, self.date_col, self.date_grouping
             )
 
@@ -399,12 +407,12 @@ class Chart:
         """
         if self.data is None or self.date_grouping is None:
             return
-        if "DateGrouping" not in self.data.columns:
+        if DATE_GROUPING_COL not in self.data.columns:
             self.add_date_grouping_column()
         if isinstance(self.data, pl.DataFrame):
-            options = sorted(self.data["DateGrouping"].unique().to_list())
+            options = sorted(self.data[DATE_GROUPING_COL].unique().to_list())
         elif isinstance(self.data, pd.DataFrame):
-            options = sorted(self.data["DateGrouping"].unique().tolist())
+            options = sorted(self.data[DATE_GROUPING_COL].unique().tolist())
         else:
             return
         if not options:
@@ -531,7 +539,8 @@ class Chart:
             label="Horizontal bars",
             value=self.default_orientation_h,
             key=f"{self.id}_orientation",
-            disabled=self.graph_type != "bar" or self.x in ["Date", "Month"],
+            disabled=self.graph_type != "bar"
+            or self.x in HORIZONTAL_BAR_BLOCKED_COLS,
         )
         self.orientation = "h" if self.orientation_h else "v"
         self.sort_legend_by_value = pp.checkbox(
@@ -552,11 +561,11 @@ class Chart:
         """
         if isinstance(df, pl.DataFrame):
             return df.filter(
-                (pl.col("DateGrouping") >= min_period)
-                & (pl.col("DateGrouping") <= max_period)
+                (pl.col(DATE_GROUPING_COL) >= min_period)
+                & (pl.col(DATE_GROUPING_COL) <= max_period)
             )
-        keep = (df["DateGrouping"] >= min_period) & (
-            df["DateGrouping"] <= max_period
+        keep = (df[DATE_GROUPING_COL] >= min_period) & (
+            df[DATE_GROUPING_COL] <= max_period
         )
         return df[keep]
 
@@ -578,7 +587,7 @@ class Chart:
             self.date_grouping
             and self.min_date_grouping is not None
             and self.max_date_grouping is not None
-            and "DateGrouping" in self.data_chart.columns
+            and DATE_GROUPING_COL in self.data_chart.columns
         ):
             self.data_chart = self._filter_date_range(
                 self.data_chart, self.min_date_grouping, self.max_date_grouping
@@ -815,7 +824,7 @@ class Chart:
         # loop periods and add vrects/text
         # --------------------------------
         max_val = (
-            self.data.group_by("Month")
+            self.data.group_by(MONTH_COL)
             .agg(pl.sum(self.y))
             .select(self.y)
             .max()
@@ -848,8 +857,8 @@ class Chart:
 
             val = (
                 self.data.filter(
-                    (col("Month") >= period["x0"] + relativedelta(months=1, day=1))
-                    & (col("Month") <= period["x1"] + relativedelta(day=31))
+                    (col(MONTH_COL) >= period["x0"] + relativedelta(months=1, day=1))
+                    & (col(MONTH_COL) <= period["x1"] + relativedelta(day=31))
                 )
                 .select(pl.sum(self.y))
                 .item()
