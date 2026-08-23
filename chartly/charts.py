@@ -115,6 +115,11 @@ class Chart:
         map_hover_cols: Optional[List[str]] = None,
         map_hover_name: Optional[str] = None,
     ) -> None:
+        # Rendering Streamlit widgets in the constructor mixes object construction
+        # with UI side effects. Kept deliberately: every existing caller expects
+        # options to render on instantiation, and splitting render out of
+        # __init__ would change that contract. Revisit if callers are ever
+        # migrated to an explicit chart.render_options() call.
         self.id = id
         self.title = title or id
         self.data = data
