@@ -12,6 +12,12 @@ pip install chartly
 Requires Python 3.9+ (see `pyproject.toml`). Core dependencies: pandas, polars,
 plotly, streamlit, python-dateutil.
 
+Internals are polars-only for speed: pass either a polars or a pandas DataFrame
+to any public entry point (`Chart`, `graphs.*`, `filter_data`) — pandas input is
+converted once at the boundary, and everything downstream runs in polars.
+Outputs are plotly figures and Streamlit elements; mixed-dtype columns are
+rejected by the conversion rather than silently tolerated.
+
 ## What's inside
 
 - `chartly.graphs` — thin wrappers around plotly express with sensible defaults:

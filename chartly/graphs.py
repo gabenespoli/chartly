@@ -372,12 +372,8 @@ def graph(
             .sort(value_col, descending=True)
             .iter_rows()
         )
-        color_col_order = {
-            k: f"{k} ({millify(v)})" for k, v in color_col_order.items()
-        }
-        df = df.with_columns(
-            col(color_col).replace(color_col_order).alias(color_col)
-        )
+        color_col_order = {k: f"{k} ({millify(v)})" for k, v in color_col_order.items()}
+        df = df.with_columns(col(color_col).replace(color_col_order).alias(color_col))
         kwargs["category_orders"][color_col] = color_col_order.values()
         color_discrete_map = dict()
         for k, v in color_col_order.items():
@@ -710,9 +706,11 @@ def sankey(
             go.Sankey(
                 node=dict(
                     label=[f"{name} ({count:,})" for name, count in labels.items()],
-                    color=[colors.get(name) for name in node_list]
-                    if colors is not None
-                    else None,
+                    color=(
+                        [colors.get(name) for name in node_list]
+                        if colors is not None
+                        else None
+                    ),
                 ),
                 link=dict(
                     source=[node_list.index(r["source"]) for r in links],
