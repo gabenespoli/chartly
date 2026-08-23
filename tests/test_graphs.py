@@ -82,3 +82,34 @@ def test_waterfall_all_features_requested_adds_no_other_bucket():
     labels = [str(x) for x in fig.data[0].y]
     assert len(labels) == 4
     assert not any("other" in label for label in labels)
+
+
+def make_grouped_stacked_df() -> pd.DataFrame:
+    combos = [(m, r, s) for m in ["jan", "feb"] for r in ["east", "west"] for s in ["a", "b"]]
+    return pd.DataFrame(
+        [{"month": m, "region": r, "segment": s, "val": (i * 3) % 10} for i, (m, r, s) in enumerate(combos)]
+    )
+
+
+def test_grouped_stacked_bar_characterization():
+    fig = graphs.graph(
+        make_grouped_stacked_df(),
+        x="month",
+        y="val",
+        color="segment",
+        bar_group="region",
+        barmode="stack",
+        graph_type="bar",
+    )
+    assert str(fig.layout.barmode) == "stack"
+    assert list(fig.layout.xaxis.ticktext) == ["feb", "jan"]
+    traces = [
+        (t.name, t.showlegend, list(t.x), list(t.y), t.marker.color)
+        for t in fig.data
+    ]
+    assert traces == [
+        ("a", True, [-0.2, 0.8], [2, 0], "#636EFA"),
+        ("a", False, [0.2, 1.2], [8, 6], "#636EFA"),
+        ("b", True, [-0.2, 0.8], [5, 3], "#EF553B"),
+        ("b", False, [0.2, 1.2], [1, 9], "#EF553B"),
+    ]
