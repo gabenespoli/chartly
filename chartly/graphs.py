@@ -615,6 +615,9 @@ def get_geo_info(country: Optional[str]) -> Dict[str, Any]:
     return geo_infos.get(country, geo_infos["WORLD"])
 
 
+# Shadows the builtin within this module deliberately: graphs.map is the
+# established public name used by Chart.update_figure and external callers.
+# Renaming would break them; revisit only at a major version.
 def map(
     df: pl.DataFrame,
     country: Optional[str] = None,
@@ -750,25 +753,25 @@ def sunburst(df: Union[pd.DataFrame, pl.DataFrame], **kwargs: Any) -> go.Figure:
     return fig
 
 
-def waterfall(sv1: pd.DataFrame, n_top_features: int = 9) -> go.Figure:
+def waterfall(shap_values: pd.DataFrame, n_top_features: int = 9) -> go.Figure:
     """Waterfall plot for shap values.
 
     The id should be the index of the pandas dataframe
     """
-    base_value = sv1["E[f(x)]"].iloc[0]
-    sv1 = sv1.drop(columns=["E[f(x)]", "f(x)"])
+    base_value = shap_values["E[f(x)]"].iloc[0]
+    shap_values = shap_values.drop(columns=["E[f(x)]", "f(x)"])
     # features are columns until the transpose below
-    feature_count = sv1.shape[1]
+    feature_count = shap_values.shape[1]
     n_top_features = min(n_top_features, feature_count)
     n_other_features = feature_count - n_top_features
-    sv1.index = ["shap_value"]
-    sv1 = sv1.T
-    sv1["abs"] = sv1["shap_value"].abs()
-    sv1 = sv1.sort_values("abs").drop(columns="abs")
-    tmp = sv1.tail(n_top_features).reset_index().rename(columns={"index": "Feature"})
+    shap_values.index = ["shap_value"]
+    shap_values = shap_values.T
+    shap_values["abs"] = shap_values["shap_value"].abs()
+    shap_values = shap_values.sort_values("abs").drop(columns="abs")
+    top_features_frame = shap_values.tail(n_top_features).reset_index().rename(columns={"index": "Feature"})
     frames = []
     if n_other_features > 0:
-        other_sum = sv1.head(feature_count - n_top_features)["shap_value"].sum()
+        other_sum = shap_values.head(feature_count - n_top_features)["shap_value"].sum()
         frames.append(
             pd.DataFrame(
                 {
@@ -777,17 +780,17 @@ def waterfall(sv1: pd.DataFrame, n_top_features: int = 9) -> go.Figure:
                 }
             )
         )
-    frames.append(tmp)
-    sv1 = pd.concat(frames).reset_index(drop=True)
+    frames.append(top_features_frame)
+    shap_values = pd.concat(frames).reset_index(drop=True)
     fig = go.Figure(
         go.Waterfall(
             name="waterfall",
             base=base_value,
             orientation="h",
-            y=sv1["Feature"],
-            x=sv1["shap_value"],
+            y=shap_values["Feature"],
+            x=shap_values["shap_value"],
             textposition="outside",
-            text=["{:+}".format(round(x, 3)) for x in sv1["shap_value"]],
+            text=["{:+}".format(round(x, 3)) for x in shap_values["shap_value"]],
         )
     )
     return fig

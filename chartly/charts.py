@@ -178,9 +178,9 @@ class Chart:
 
     @staticmethod
     def header(title: str) -> List[Any]:
-        cc = st.columns([8, 4, 4, 4, 3])
-        cc[0].markdown(f"<h1>| {title}</h1>", unsafe_allow_html=True)
-        return cc
+        cols = st.columns([8, 4, 4, 4, 3])
+        cols[0].markdown(f"<h1>| {title}</h1>", unsafe_allow_html=True)
+        return cols
 
     @staticmethod
     def _popover_chart_options_style() -> str:
@@ -455,30 +455,30 @@ class Chart:
         )
 
     def get_options(self) -> None:
-        cc = self.header(self.title)
-        cc[4].write(self._popover_chart_options_style(), unsafe_allow_html=True)
-        pp = cc[4].popover("Options")
+        cols = self.header(self.title)
+        cols[4].write(self._popover_chart_options_style(), unsafe_allow_html=True)
+        options_popup = cols[4].popover("Options")
 
-        self.graph_type = pp.selectbox(
+        self.graph_type = options_popup.selectbox(
             label="Graph Type",
             options=self.graph_types,
             index=self.graph_types.index(self.default_graph_type),
             key=f"{self.id}_graph_type",
         )
 
-        self.y = cc[1].selectbox(
+        self.y = cols[1].selectbox(
             label="y",
             options=self.y_opts,
             index=self.y_opts.index(self.default_y),
             key=f"{self.id}_y",
         )
-        self.x = cc[2].selectbox(
+        self.x = cols[2].selectbox(
             label="x",
             options=self.x_opts,
             index=self.x_opts.index(self.default_x),
             key=f"{self.id}_x",
         )
-        self.color = cc[3].selectbox(
+        self.color = cols[3].selectbox(
             label="Color",
             options=self.color_opts,
             index=self.color_opts.index(self.default_color),
@@ -494,7 +494,7 @@ class Chart:
             if self.default_facet_col is None
             else facet_opts.index(self.default_facet_col)
         )
-        self.facet_col = pp.selectbox(
+        self.facet_col = options_popup.selectbox(
             label="Column Split",
             options=facet_opts,
             index=self.facet_col_index,
@@ -507,7 +507,7 @@ class Chart:
             if self.default_facet_row is None
             else facet_row_opts.index(self.default_facet_row)
         )
-        self.facet_row = pp.selectbox(
+        self.facet_row = options_popup.selectbox(
             label="Row Split",
             options=facet_row_opts,
             index=self.facet_row_index,
@@ -518,7 +518,7 @@ class Chart:
         self.size_index = (
             0 if self.default_size is None else size_opts.index(self.default_size)
         )
-        self.size = pp.selectbox(
+        self.size = options_popup.selectbox(
             label="Size",
             options=size_opts,
             index=self.size_index,
@@ -526,7 +526,7 @@ class Chart:
             disabled=self.graph_type not in ["scatter", "map"],
         )
 
-        self.barmode = pp.selectbox(
+        self.barmode = options_popup.selectbox(
             label="Bar Mode",
             options=list(BARMODES.keys()),
             index=list(BARMODES.keys()).index(self.default_barmode),
@@ -539,7 +539,7 @@ class Chart:
             if self.default_bar_group is None
             else bar_group_opts.index(self.default_bar_group)
         )
-        self.bar_group = pp.selectbox(
+        self.bar_group = options_popup.selectbox(
             label="Bar Group",
             options=bar_group_opts,
             index=self.bar_group_index,
@@ -552,21 +552,21 @@ class Chart:
             if self.default_marginal is None
             else marginal_opts.index(self.default_marginal)
         )
-        self.marginal = pp.selectbox(
+        self.marginal = options_popup.selectbox(
             label="Marginal Plots",
             options=marginal_opts,
             index=self.marginal_index,
             key=f"{self.id}_marginal",
             disabled=self.graph_type != "scatter",
         )
-        self.histogram_bins = pp.number_input(
+        self.histogram_bins = options_popup.number_input(
             label="Marginal Histogram Bins",
             value=self.default_histogram_bins,
             step=5,
             key=f"{self.id}_histogram_bins",
         )
 
-        self.height = pp.number_input(
+        self.height = options_popup.number_input(
             label="Height",
             value=self.default_height,
             min_value=100,
@@ -575,14 +575,14 @@ class Chart:
             key=f"{self.id}_height",
         )
 
-        self.orientation_h = pp.checkbox(
+        self.orientation_h = options_popup.checkbox(
             label="Horizontal bars",
             value=self.default_orientation_h,
             key=f"{self.id}_orientation",
             disabled=self.graph_type != "bar" or self.x in HORIZONTAL_BAR_BLOCKED_COLS,
         )
         self.orientation = "h" if self.orientation_h else "v"
-        self.sort_legend_by_value = pp.checkbox(
+        self.sort_legend_by_value = options_popup.checkbox(
             label="Sort legend by value",
             value=self.default_sort_legend_by_value,
             disabled=True if self.facet_col or self.facet_row else False,

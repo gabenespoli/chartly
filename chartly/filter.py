@@ -138,7 +138,7 @@ class Filter:
         return where_or_and + " " + " and ".join(filter_list)
 
 
-def hash_func(obj: Filter) -> str:
+def filter_hash(obj: Filter) -> str:
     return obj.filter_sql()
 
 
@@ -181,7 +181,7 @@ def combine_filters(
     return flt
 
 
-@st.cache_data(ttl=None, hash_funcs={Filter: hash_func, pl.DataFrame: utils.pl2pd})
+@st.cache_data(ttl=None, hash_funcs={Filter: filter_hash, pl.DataFrame: utils.pl2pd})
 def filter_data(
     df: pl.DataFrame,
     flt: Filter,
