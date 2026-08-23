@@ -48,15 +48,16 @@ class Filter:
     ) -> None:
         """Add a filter to the self.filters dictionary using a streamlit selectbox
         widget."""
+        if default is None:
+            default = options[0]
         self.col_names[label] = col_name or label
-        default = default or options[0]
         key = f"{self.id}_{label}_{filter_type}"
         self.filter_types[label] = filter_type
         self.bypass_options[label] = bypass_option
         self.filters[label] = st.selectbox(
             label=label,
             options=options,
-            index=options.index(st.session_state.get(key) or default),
+            index=options.index(self._stored_selection(key, default)),
             placeholder=placeholder or label,
             label_visibility=label_visibility or self.label_visibility,
             key=key,
@@ -75,18 +76,25 @@ class Filter:
     ) -> None:
         """Add a filter to the self.filters dictionary using a streamlit multiselect
         widget."""
-        default = default or []
+        if default is None:
+            default = []
         self.col_names[label] = col_name or label
         key = f"{self.id}_{label}"
         self.filters[label] = st.multiselect(
             label=label,
             options=options,
-            default=st.session_state.get(key) or default,
+            default=self._stored_selection(key, default),
             placeholder=placeholder or label,
             label_visibility=label_visibility or self.label_visibility,
             key=key,
             **kwargs,
         )
+
+    @staticmethod
+    def _stored_selection(key: str, fallback: Any) -> Any:
+        """Return the user's stored widget selection for key, honoring falsy values
+        like 0 or an empty list instead of falling back to the default."""
+        return st.session_state[key] if key in st.session_state else fallback
 
     @staticmethod
     def list(items: List[str]) -> str:
