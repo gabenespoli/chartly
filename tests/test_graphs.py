@@ -30,8 +30,9 @@ def test_category_orders_alphabetical_polars(df_polars):
 
 
 def test_unsortable_column_skips_ordering():
+    # Mixed-type columns are rejected by the pandas->polars boundary conversion
     df = pd.DataFrame({"cat": ["a", 1, "b"], "val": [1, 2, 3]})
-    with pytest.warns(UserWarning, match="unsortable"):
+    with pytest.raises(TypeError):
         graphs.graph(df, x="cat", y="val")
 
 
@@ -119,16 +120,24 @@ def test_grouped_stacked_bar_characterization():
     ]
 
 
+from chartly import graphs
+from chartly import utils as graph_utils
+
+
 def test_add_category_orders_does_not_mutate_kwargs(df_pandas):
     kwargs = {"x": "cat"}
-    out = graphs._add_category_orders(df_pandas, ["x"], kwargs)
+    out = graphs._add_category_orders(
+        graph_utils.ensure_polars(df_pandas), ["x"], kwargs
+    )
     assert "category_orders" not in kwargs
-    assert out["category_orders"]["cat"] == ["a", "b", "c"]
+    assert list(out["category_orders"]["cat"]) == ["a", "b", "c"]
 
 
 def test_add_category_orders_preserves_user_order(df_pandas):
     kwargs = {"x": "cat", "category_orders": {"cat": ["c", "a", "b"]}}
-    out = graphs._add_category_orders(df_pandas, ["x"], kwargs)
+    out = graphs._add_category_orders(
+        graph_utils.ensure_polars(df_pandas), ["x"], kwargs
+    )
     assert out["category_orders"]["cat"] == ["c", "a", "b"]
 
 

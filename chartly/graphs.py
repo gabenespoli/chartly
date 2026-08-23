@@ -14,6 +14,8 @@ import plotly.graph_objects as go
 import polars as pl
 from polars import col
 
+from chartly import utils
+
 FONT_SIZE = 16
 
 
@@ -46,7 +48,7 @@ def millify(
 
 
 def _add_category_orders(
-    df: Union[pd.DataFrame, pl.DataFrame],
+    df: pl.DataFrame,
     plot_vars: List[str],
     kwargs: Dict[str, Any],
     colormaps: Optional[Dict[str, Any]] = None,
@@ -72,12 +74,7 @@ def _add_category_orders(
                 ]
             else:
                 try:
-                    if isinstance(df, pl.DataFrame):
-                        category_orders[col_name] = df[col_name].unique().sort()
-                    else:
-                        # ndarray.sort() sorts in place and returns None, and pandas 3
-                        # unique() may return an ArrowStringArray without .sort()
-                        category_orders[col_name] = sorted(df[col_name].unique())
+                    category_orders[col_name] = df[col_name].unique().sort()
                 except TypeError:
                     warnings.warn(
                         f"Column {col_name!r} contains unsortable types (e.g., mixed"
@@ -86,16 +83,13 @@ def _add_category_orders(
     return {**kwargs, "category_orders": category_orders}
 
 
-def _get_height(df: Union[pd.DataFrame, pl.DataFrame], kwargs: Dict[str, Any]) -> int:
+def _get_height(df: pl.DataFrame, kwargs: Dict[str, Any]) -> int:
     """Adjust graph height based on the number of categories that will be plotted with
     facet_row"""
     default_height = 550
     if "height" in kwargs.keys() or kwargs.get("facet_row") is None:
         return default_height
-    if isinstance(df, pd.DataFrame):
-        nunique = df[kwargs.get("facet_row")].nunique()
-    elif isinstance(df, pl.DataFrame):
-        nunique = df[kwargs.get("facet_row")].n_unique()
+    nunique = df[kwargs.get("facet_row")].n_unique()
     return 800 if nunique > 4 else default_height
 
 
@@ -313,6 +307,7 @@ def graph(
     compatibility with Chart.update_figure's options popover. Revisit only if a
     major version changes this public surface.
     """
+    df = utils.ensure_polars(df)
     colormaps = colormaps or {}
 
     group_col = kwargs.get("x")
@@ -361,18 +356,10 @@ def graph(
             if x is not None
         ]
         groupby = list(set([group_col] + groupby))
-        if isinstance(df, pd.DataFrame):
-            if agg_func == "mean":
-                df = df.groupby(groupby)[value_col].mean().reset_index()
-            else:
-                df = df.groupby(groupby)[value_col].sum().reset_index()
-        elif isinstance(df, pl.DataFrame):
-            if agg_func == "mean":
-                df = df.group_by(groupby).agg(col(value_col).mean().alias(value_col))
-            else:
-                df = df.group_by(groupby).agg(col(value_col).sum().alias(value_col))
+        if agg_func == "mean":
+            df = df.group_by(groupby).agg(col(value_col).mean().alias(value_col))
         else:
-            raise ValueError("df should be a pandas or polars DataFrame")
+            df = df.group_by(groupby).agg(col(value_col).sum().alias(value_col))
 
     kwargs["text_auto"] = True if text_auto is None else text_auto
 
@@ -383,30 +370,18 @@ def graph(
         and kwargs.get("facet_col") is None
         and kwargs.get("facet_row") is None
     ):
-        if isinstance(df, pd.DataFrame):
-            color_col_order = (
-                df.groupby(color_col)[value_col]
-                .sum()
-                .sort_values(ascending=False)
-                .to_dict()
-            )
-            color_col_order = {
-                k: f"{k} ({millify(v)})" for k, v in color_col_order.items()
-            }
-            df[color_col] = df[color_col].map(color_col_order)
-        elif isinstance(df, pl.DataFrame):
-            color_col_order = dict(
-                df.group_by(color_col)
-                .agg(col(value_col).sum().alias(value_col))
-                .sort(value_col, descending=True)
-                .iter_rows()
-            )
-            color_col_order = {
-                k: f"{k} ({millify(v)})" for k, v in color_col_order.items()
-            }
-            df = df.with_columns(
-                col(color_col).replace(color_col_order).alias(color_col)
-            )
+        color_col_order = dict(
+            df.group_by(color_col)
+            .agg(col(value_col).sum().alias(value_col))
+            .sort(value_col, descending=True)
+            .iter_rows()
+        )
+        color_col_order = {
+            k: f"{k} ({millify(v)})" for k, v in color_col_order.items()
+        }
+        df = df.with_columns(
+            col(color_col).replace(color_col_order).alias(color_col)
+        )
         kwargs["category_orders"][color_col] = color_col_order.values()
         color_discrete_map = dict()
         for k, v in color_col_order.items():
@@ -414,10 +389,7 @@ def graph(
         kwargs["color_discrete_map"] = color_discrete_map
 
     if graph_type in ["line", "scatter"]:
-        if isinstance(df, pl.DataFrame):
-            df = df.sort(by=[group_col, x_col])
-        else:
-            df = df.sort_values(by=[group_col, x_col])
+        df = df.sort(by=[group_col, x_col])
         fig = px.scatter(
             df,
             **{
@@ -491,8 +463,11 @@ def donut(
     - automatically looks for the names, facet_col, and facet_row args, and uses the
     colors module to set color maps and category orders
     """
-    df = kwargs.get("data_frame")
-    df = args[0] if df is None else df
+    df = kwargs.pop("data_frame", None)
+    if df is None:
+        df = args[0] if args else None
+        args = args[1:]
+    df = utils.ensure_polars(df)
 
     # set color map
     if "color" not in kwargs:
@@ -508,6 +483,7 @@ def donut(
     )
 
     fig = px.pie(
+        df,
         *args,
         hole=hole,
         **kwargs,
@@ -619,7 +595,7 @@ def get_geo_info(country: Optional[str]) -> Dict[str, Any]:
 # established public name used by Chart.update_figure and external callers.
 # Renaming would break them; revisit only at a major version.
 def map(
-    df: pl.DataFrame,
+    df: Union[pd.DataFrame, pl.DataFrame],
     country: Optional[str] = None,
     size_col: Optional[str] = None,
     color_col: Optional[str] = None,
@@ -633,6 +609,7 @@ def map(
     colormaps: Optional[Dict[str, Any]] = None,
     **_: Any,
 ) -> go.Figure:
+    df = utils.ensure_polars(df)
     hover_cols = hover_cols or []
     colormaps = colormaps or {}
     geo_info = get_geo_info(country)
@@ -755,7 +732,7 @@ def sunburst(df: Union[pd.DataFrame, pl.DataFrame], **kwargs: Any) -> go.Figure:
     # Pure passthrough of px.sunburst. Kept deliberately as a stable seam so
     # callers can treat graph/donut/sunburst uniformly; revisit if the package
     # ever cuts a major version.
-    fig = px.sunburst(df, **kwargs)
+    fig = px.sunburst(utils.ensure_polars(df), **kwargs)
     return fig
 
 
