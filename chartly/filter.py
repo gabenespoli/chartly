@@ -183,7 +183,7 @@ def combine_filters(
 
 @st.cache_data(ttl=None, hash_funcs={Filter: filter_hash, pl.DataFrame: utils.pl2pd})
 def filter_data(
-    df: pl.DataFrame,
+    df: Union[pd.DataFrame, pl.DataFrame],
     flt: Filter,
     names: Optional[Union[str, List[str]]] = None,
     return_size_too: bool = False,
@@ -196,6 +196,7 @@ def filter_data(
         exact call shape; splitting it in two would change cache keys. Revisit only
         on a major version bump.
     """
+    df = utils.ensure_polars(df)
     df_size = {"Total": df.shape[0]}
     if names is None:
         names = flt.filters.keys()

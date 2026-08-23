@@ -1,5 +1,6 @@
 import warnings
 
+import pandas as pd
 import polars as pl
 import streamlit as st
 
@@ -94,3 +95,13 @@ def test_filter_sql_skips_empty_multiselect():
     f = make_filter()
     f.multiselect(label="Product", options=["p1", "p2"])
     assert f.filter_sql() == ""
+
+
+def test_filter_data_accepts_pandas_input(monkeypatch):
+    monkeypatch.setattr(st, "session_state", {})
+    f = Filter(id="pdsrc")
+    f.selectbox(label="Region", options=["east", "west"], col_name="region")
+    df = pd.DataFrame({"region": ["east", "west", "east"], "amount": [5, 5, 5]})
+    out = filter_data(df, f)
+    assert isinstance(out, pl.DataFrame)
+    assert out.shape[0] == 2
