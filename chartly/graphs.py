@@ -302,6 +302,12 @@ def graph(
         sort_legend_by_value: Sort the legend by the sum of the values in each category.
         pre_agg_for_text_auto: Pre-aggregate the data to get the proper text_auto
             values.
+
+    Note: the boolean flags here (legend_reversed, legend_hide_title,
+    color_matches_xy, sort_legend_by_value, pre_agg_for_text_auto) would normally
+    be split into separate functions, but they are kept as flags for API
+    compatibility with Chart.update_figure's options popover. Revisit only if a
+    major version changes this public surface.
     """
     colormaps = colormaps or {}
 

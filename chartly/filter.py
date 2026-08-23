@@ -198,6 +198,9 @@ def filter_data(
     names: A subset of filter keys to filter.
     return_size_too: If True, return a tuple with first the filtered dataframe, and
         second a dataframe showing the count of rows after each filter step.
+        Boolean flag kept deliberately: callers rely on st.cache_data hashing this
+        exact call shape; splitting it in two would change cache keys. Revisit only
+        on a major version bump.
     """
     df_size = {"Total": df.shape[0]}
     if names is None:
