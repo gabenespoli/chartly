@@ -560,6 +560,25 @@ class Chart:
             key=f"{self.id}_sort_legend_by_value",
         )
 
+    @staticmethod
+    def _filter_date_range(
+        df: Union[pd.DataFrame, pl.DataFrame],
+        min_period: str,
+        max_period: str,
+    ) -> Union[pd.DataFrame, pl.DataFrame]:
+        """Keep rows whose DateGrouping label falls within the inclusive range.
+        Label formats are zero-padded, so lexicographic order matches chronology.
+        """
+        if isinstance(df, pl.DataFrame):
+            return df.filter(
+                (pl.col("DateGrouping") >= min_period)
+                & (pl.col("DateGrouping") <= max_period)
+            )
+        keep = (df["DateGrouping"] >= min_period) & (
+            df["DateGrouping"] <= max_period
+        )
+        return df[keep]
+
     def update_figure(
         self,
         orientation: Optional[str] = None,
@@ -580,9 +599,8 @@ class Chart:
             and self.max_date_grouping is not None
             and "DateGrouping" in self.data_chart.columns
         ):
-            self.data_chart = self.data_chart.filter(
-                (pl.col("DateGrouping") >= self.min_date_grouping)
-                & (pl.col("DateGrouping") <= self.max_date_grouping)
+            self.data_chart = self._filter_date_range(
+                self.data_chart, self.min_date_grouping, self.max_date_grouping
             )
         df = self.data_chart
         if self.graph_type == "map":

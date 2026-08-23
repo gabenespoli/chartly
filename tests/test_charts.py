@@ -164,3 +164,15 @@ def test_get_last_complete_period_weekly_format():
     chart = Chart(id="p", data=pl.DataFrame({"a": [1]}))
     chart.date_grouping = "Weekly"
     assert chart.get_last_complete_period(date(2027, 1, 1)) == "2026-W52"
+
+
+@pytest.mark.parametrize("frame", ["pandas", "polars"])
+def test_filter_date_range_inclusive(frame):
+    labels = ["2024-01", "2024-02", "2024-03"]
+    if frame == "pandas":
+        df = pd.DataFrame({"DateGrouping": labels, "v": [1, 2, 3]})
+    else:
+        df = pl.DataFrame({"DateGrouping": labels, "v": [1, 2, 3]})
+    out = Chart._filter_date_range(df, "2024-01", "2024-02")
+    got = out["DateGrouping"].tolist() if frame == "pandas" else out["DateGrouping"].to_list()
+    assert got == ["2024-01", "2024-02"]
