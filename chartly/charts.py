@@ -811,12 +811,13 @@ class Chart:
                     selector=dict(type="histogram"),
                 )
 
-    def show_figure(self, use_container_width: bool = True) -> None:
+    def show_figure(self, width: str = "stretch") -> None:
         """Display the Plotly figure in the Streamlit app.
 
         Args:
-            use_container_width: If True (default), the chart fills the
-                container width. If False, uses the figure's native width.
+            width: The width of the chart. ``"stretch"`` (default) fills the
+                container width. ``"content"`` uses the figure's native width.
+                An integer pixel value is also accepted.
 
         Raises:
             Displays a Streamlit error if :meth:`update_figure` has not been called.
@@ -824,7 +825,7 @@ class Chart:
         if self.fig is not None:
             st.plotly_chart(
                 self.fig,
-                use_container_width=use_container_width,
+                width=width,
                 key=f"{self.id}_plotly_chart",
             )
         else:
