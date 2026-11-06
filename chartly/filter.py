@@ -87,15 +87,17 @@ class Filter:
         key = f"{self.id}_{label}_{filter_type}"
         self.filter_types[label] = filter_type
         self.bypass_options[label] = bypass_option
-        self.filters[label] = st.selectbox(
+        selectbox_kwargs: Dict[str, Any] = dict(
             label=label,
             options=options,
-            index=options.index(self._stored_selection(key, default)),
             placeholder=placeholder or label,
             label_visibility=label_visibility or self.label_visibility,
             key=key,
             **kwargs,
         )
+        if key not in st.session_state:
+            selectbox_kwargs["index"] = options.index(default)
+        self.filters[label] = st.selectbox(**selectbox_kwargs)
 
     def multiselect(
         self,
@@ -126,21 +128,17 @@ class Filter:
             default = []
         self.col_names[label] = col_name or label
         key = f"{self.id}_{label}"
-        self.filters[label] = st.multiselect(
+        multiselect_kwargs: Dict[str, Any] = dict(
             label=label,
             options=options,
-            default=self._stored_selection(key, default),
             placeholder=placeholder or label,
             label_visibility=label_visibility or self.label_visibility,
             key=key,
             **kwargs,
         )
-
-    @staticmethod
-    def _stored_selection(key: str, fallback: Any) -> Any:
-        """Return the user's stored widget selection for key, honoring falsy values
-        like 0 or an empty list instead of falling back to the default."""
-        return st.session_state[key] if key in st.session_state else fallback
+        if key not in st.session_state:
+            multiselect_kwargs["default"] = default
+        self.filters[label] = st.multiselect(**multiselect_kwargs)
 
     @staticmethod
     def list(items: List[str]) -> str:
