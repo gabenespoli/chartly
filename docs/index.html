@@ -687,8 +687,8 @@ chart.<span class="fn">show_figure</span>()</pre>
                 <p>Render a date grouping selector (Daily through Yearly) and optional min/max date range filter.</p>
             </div>
             <div class="api-card" id="chart-show-data">
-                <h4>chart.show_data(raw_data, chart_data, map_data, ...)</h4>
-                <p>Show data tables in expandable sections below the chart for debugging and exploration.</p>
+                <h4>chart.show_data(raw_data, chart_data, agg_data, map_data, ...)</h4>
+                <p>Show data tables in expandable sections below the chart. <code>chart_data</code> (default) renders the raw row-level frame behind the chart filtered to its date range; <code>raw_data</code> shows the full source data; <code>agg_data</code> shows the aggregated frame rendered by <code>update_figure()</code>; <code>map_data</code> shows rows excluded from map charts.</p>
             </div>
             <div class="api-card" id="chart-group-by-date">
                 <h4>Chart.group_by_date(df, date_grouping, date_col, ...)</h4>

@@ -864,9 +864,10 @@ class Chart:
 
     def show_data(
         self,
-        raw_data: bool = True,
-        chart_data: bool = False,
-        map_data: bool = True,
+        raw_data: bool = False,
+        chart_data: bool = True,
+        agg_data: bool = False,
+        map_data: bool = False,
         sort_col: Optional[str] = None,
         sort_desc: bool = False,
         **kwargs: Any,
@@ -875,24 +876,51 @@ class Chart:
 
         Args:
             raw_data: If True, show the full source data in an expander.
-            chart_data: If True, show the grouped/aggregated chart data.
+                Defaults to False.
+            chart_data: If True, show the raw row-level frame behind the chart
+                — ``self.data`` filtered by the same min/max date range
+                applied by :meth:`update_figure` — under
+                ``"{title} chart data"``. Falls back to unfiltered data when
+                no range is set (e.g. ``date_grouping=None``). Defaults to True.
+            agg_data: If True, show the grouped/aggregated frame rendered by
+                :meth:`update_figure`. Defaults to False.
             map_data: If True and graph_type is "map", show rows excluded from
-                the map due to missing lat/lon or size values.
+                the map due to missing lat/lon or size values. Defaults to False.
             sort_col: Column name to sort all displayed tables by.
             sort_desc: If True, sort descending. Defaults to False (ascending).
             **kwargs: Additional arguments passed to ``st.expander()``.
         """
         data = self.data
         data_chart = self.data_chart
+
+        chart_rows = data
+        if (
+            chart_rows is not None
+            and DATE_GROUPING_COL in chart_rows.columns
+            and self.min_date_grouping is not None
+            and self.max_date_grouping is not None
+        ):
+            chart_rows = self._filter_date_range(
+                chart_rows, self.min_date_grouping, self.max_date_grouping
+            )
+
         if sort_col is not None:
             if isinstance(data, pl.DataFrame) and sort_col in data.columns:
                 data = data.sort(sort_col, descending=sort_desc)
+            if (
+                chart_rows is not None
+                and sort_col in chart_rows.columns
+            ):
+                chart_rows = chart_rows.sort(sort_col, descending=sort_desc)
             if isinstance(data_chart, pl.DataFrame) and sort_col in data_chart.columns:
                 data_chart = data_chart.sort(sort_col, descending=sort_desc)
         if raw_data:
             self.data_expander(data, f"{self.title} data", **kwargs)
         if chart_data:
-            self.data_expander(data_chart, f"{self.title} chart data", **kwargs)
+            if chart_rows is not None:
+                self.data_expander(chart_rows, f"{self.title} chart data", **kwargs)
+        if agg_data:
+            self.data_expander(data_chart, f"{self.title} aggregate data", **kwargs)
         if map_data and self.graph_type == "map":
             self.data_expander(
                 self.data_nomap, f"{self.title} data missing lat/lon", **kwargs
