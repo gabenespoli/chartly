@@ -134,8 +134,77 @@ def test_grouped_stacked_bar_sort_legend_by_value():
     assert len(fig.data) == 4
     # combinations are group-major, so both stacks debut in the first group
     assert [t.showlegend for t in fig.data] == [True, True, False, False]
-    # legend names carry the millified per-group total
-    assert all(t.name.endswith(")") and " (" in t.name for t in fig.data)
+    # legend names carry the millified per-group total with the sum marker
+    assert all(" (∑ " in t.name and t.name.endswith(")") for t in fig.data)
+
+
+def test_grouped_stacked_bar_legend_value_average():
+    fig = graphs.graph(
+        make_grouped_stacked_df(),
+        x="month",
+        y="val",
+        color="segment",
+        bar_group="region",
+        barmode="stack",
+        graph_type="bar",
+        sort_legend_by_value=True,
+        legend_value="average",
+    )
+    # two x periods (jan, feb); per-group sums: east b=8, east a=2,
+    # west a=14, west b=10 -> averages 4, 1, 7, 5
+    shown = [t.name for t in fig.data if t.showlegend]
+    assert shown == ["b (Ω 4)", "a (Ω 1)"]
+
+
+def make_periods_df() -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "period": ["p1", "p2", "p3", "p1", "p2", "p3"],
+            "cat": ["a", "a", "a", "b", "b", "b"],
+            "val": [3, 6, 9, 2, 4, 6],
+        }
+    )
+
+
+def test_legend_value_average_divides_by_periods():
+    fig = graphs.graph(
+        make_periods_df(),
+        x="period",
+        y="val",
+        color="cat",
+        graph_type="bar",
+        sort_legend_by_value=True,
+        legend_value="average",
+    )
+    names = [t.name for t in fig.data]
+    # sums 18 and 12 over 3 periods -> 6 and 4
+    assert names == ["a (Ω 6)", "b (Ω 4)"]
+
+
+def test_legend_value_sum_uses_sum_marker():
+    fig = graphs.graph(
+        make_periods_df(),
+        x="period",
+        y="val",
+        color="cat",
+        graph_type="bar",
+        sort_legend_by_value=True,
+    )
+    names = [t.name for t in fig.data]
+    assert names == ["a (∑ 18)", "b (∑ 12)"]
+
+
+def test_legend_value_invalid_raises():
+    with pytest.raises(ValueError, match="legend_value"):
+        graphs.graph(
+            make_periods_df(),
+            x="period",
+            y="val",
+            color="cat",
+            graph_type="bar",
+            sort_legend_by_value=True,
+            legend_value="median",
+        )
 
 
 from chartly import graphs

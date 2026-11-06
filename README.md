@@ -110,7 +110,7 @@ Users can switch between Daily, Weekly, Bi-Weekly, Monthly, Quarterly, and Yearl
 - **Cached filtering** — `filter_data()` uses Streamlit's caching for instant reruns
 - **SQL generation** — `Filter.filter_sql()` produces WHERE clauses for database queries
 - **Grouped+Stacked bars** — A unique bar mode that combines grouping and stacking
-- **Legend sorting** — Optionally sort legend entries by total value
+- **Legend sorting** — Optionally sort legend entries by value, showing each series' total (∑) or average per x period (Ω)
 
 ---
 

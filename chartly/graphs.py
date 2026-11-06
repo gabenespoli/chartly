@@ -73,6 +73,20 @@ def millify(
     return "{0}{dx}".format(result, dx=millnames[millidx])
 
 
+LEGEND_VALUE_SYMBOLS = {"sum": "∑", "average": "Ω"}
+
+
+def _legend_symbol(legend_value: str) -> str:
+    """Return the legend label marker for a ``legend_value``, validating it."""
+    try:
+        return LEGEND_VALUE_SYMBOLS[legend_value]
+    except KeyError:
+        raise ValueError(
+            f"legend_value must be one of {sorted(LEGEND_VALUE_SYMBOLS)}; "
+            f"got {legend_value!r}"
+        ) from None
+
+
 def _add_category_orders(
     df: pl.DataFrame,
     plot_vars: List[str],
@@ -152,6 +166,7 @@ def _grouped_stacked_bar(
     colormaps: Dict[str, Any],
     sort_legend_by_value: bool,
     text_auto: Optional[Union[str, bool]],
+    legend_value: str = "sum",
 ) -> go.Figure:
     """Grouped + Stacked bars: go.Bar traces offset per bar_group, stacked by
     stack_col.
@@ -193,6 +208,8 @@ def _grouped_stacked_bar(
     rows = totals.rows(named=True)
 
     if sort_legend_by_value:
+        symbol = _legend_symbol(legend_value)
+        divisor = df[x_col].n_unique() if legend_value == "average" else 1
         if bar_group_col == stack_col:
             # When same column, just sort by value descending
             ordered = sorted(rows, key=lambda r: (-float(r[value_col]), r["_stack"]))
@@ -205,9 +222,11 @@ def _grouped_stacked_bar(
             )
             sorted_combinations = [(r["_group"], r["_stack"]) for r in ordered]
 
-        # Create legend names with values
+        # Create legend names with values; sum (∑) or average per x period (Ω)
         legend_name_map = {
-            (r["_group"], r["_stack"]): f"{r['_stack']} ({millify(r[value_col])})"
+            (r["_group"], r["_stack"]): (
+                f"{r['_stack']} ({symbol} {millify(r[value_col] / divisor)})"
+            )
             for r in rows
         }
     else:
@@ -327,6 +346,7 @@ def graph(
     text_auto: Optional[Union[str, bool]] = None,
     color_matches_xy: bool = False,
     sort_legend_by_value: bool = False,
+    legend_value: str = "sum",
     pre_agg_for_text_auto: bool = True,
     agg_func: str = "sum",
     graph_type: str = "bar",
@@ -348,7 +368,11 @@ def graph(
         color_matches_xy: If True and no color column is set, use the x/y
             grouping column as the color.
         sort_legend_by_value: Sort legend entries by their total value
-            (descending), appending the total to each legend label.
+            (descending), appending the sum (∑) or average (Ω) per x period to
+            each legend label.
+        legend_value: What the legend label value represents — "sum" (∑,
+            total) or "average" (Ω, sum divided by the number of unique x
+            periods shown). Only used when ``sort_legend_by_value`` is True.
         pre_agg_for_text_auto: Pre-aggregate data so text labels show correct
             totals per bar segment.
         agg_func: Aggregation function — "sum" or "mean".
@@ -367,6 +391,7 @@ def graph(
         for API compatibility with Chart.update_figure's options popover.
         Revisit only if a major version changes this public surface.
     """
+    _legend_symbol(legend_value)  # validate eagerly, regardless of chart path
     df = utils.ensure_polars(df)
     colormaps = colormaps or {}
 
@@ -430,19 +455,26 @@ def graph(
         and kwargs.get("facet_col") is None
         and kwargs.get("facet_row") is None
     ):
+        symbol = _legend_symbol(legend_value)
+        divisor = df[group_col].n_unique() if legend_value == "average" else 1
         color_col_order = dict(
             df.group_by(color_col)
             .agg(col(value_col).sum().alias(value_col))
             .sort(value_col, descending=True)
             .iter_rows()
         )
-        color_col_order = {k: f"{k} ({millify(v)})" for k, v in color_col_order.items()}
+        color_col_order = {
+            k: f"{k} ({symbol} {millify(v / divisor)})"
+            for k, v in color_col_order.items()
+        }
         df = df.with_columns(col(color_col).replace(color_col_order).alias(color_col))
         kwargs["category_orders"][color_col] = color_col_order.values()
-        color_discrete_map = dict()
-        for k, v in color_col_order.items():
-            color_discrete_map[v] = kwargs.get("color_discrete_map").get(k)
-        kwargs["color_discrete_map"] = color_discrete_map
+        existing_map = kwargs.get("color_discrete_map")
+        if existing_map is not None:
+            color_discrete_map = dict()
+            for k, v in color_col_order.items():
+                color_discrete_map[v] = existing_map.get(k)
+            kwargs["color_discrete_map"] = color_discrete_map
 
     if graph_type in ["line", "scatter"]:
         df = df.sort(by=[group_col, x_col])
@@ -468,6 +500,7 @@ def graph(
             colormaps=colormaps,
             sort_legend_by_value=sort_legend_by_value,
             text_auto=text_auto,
+            legend_value=legend_value,
         )
     else:
         # Remove bar_group from kwargs before passing to px.bar

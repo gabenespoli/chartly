@@ -122,6 +122,7 @@ class Chart:
         default_histogram_bins: int = 50,
         default_orientation_h: bool = False,
         default_sort_legend_by_value: bool = False,
+        default_legend_value: str = "sum",
         colormaps: Optional[Dict[str, Any]] = None,
         date_col: Optional[str] = None,
         date_grouping: Optional[str] = None,
@@ -160,6 +161,9 @@ class Chart:
             default_histogram_bins: Default number of bins for marginal histograms.
             default_orientation_h: If True, default to horizontal bars.
             default_sort_legend_by_value: If True, sort legend entries by total value.
+            default_legend_value: What the legend label value represents when legend
+                sorting is enabled — "sum" (∑, total) or "average" (Ω, sum divided by
+                the number of unique x periods shown).
             colormaps: Dictionary mapping column names to color maps
                 (e.g., ``{"Status": {"Active": "green", "Inactive": "red"}}``).
             date_col: Name of the datetime column for date grouping.
@@ -217,6 +221,12 @@ class Chart:
         self.default_histogram_bins = default_histogram_bins
         self.default_orientation_h = default_orientation_h
         self.default_sort_legend_by_value = default_sort_legend_by_value
+        self.default_legend_value = default_legend_value.lower()
+        if self.default_legend_value not in graphs.LEGEND_VALUE_SYMBOLS:
+            raise ValueError(
+                f'default_legend_value must be "sum" or "average"; '
+                f"got {default_legend_value!r}"
+            )
 
         self.get_options()
 
@@ -668,6 +678,14 @@ class Chart:
             disabled=True if self.facet_col or self.facet_row else False,
             key=f"{self.id}_sort_legend_by_value",
         )
+        legend_value_options = ["Sum", "Average"]
+        self.legend_value = options_popup.selectbox(
+            label="Legend value",
+            options=legend_value_options,
+            index=0 if self.default_legend_value == "sum" else 1,
+            disabled=not self.sort_legend_by_value,
+            key=f"{self.id}_legend_value",
+        ).lower()
 
     @staticmethod
     def _filter_date_range(
@@ -798,6 +816,7 @@ class Chart:
                 orientation=orientation or self.orientation,
                 height=self.height,
                 sort_legend_by_value=self.sort_legend_by_value,
+                legend_value=self.legend_value,
                 colormaps=colormaps or self.colormaps,
                 bar_group=self.bar_group if self.barmode == "grouped+stacked" else None,
                 **marginal_args,
