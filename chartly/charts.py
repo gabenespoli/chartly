@@ -874,13 +874,21 @@ class Chart:
     def data_expander(df: pl.DataFrame, title: str, **kwargs: Any) -> None:
         """Render a DataFrame inside a Streamlit expander with row count.
 
+        ``pl.Date`` columns render as bare dates (``YYYY-MM-DD``) instead of
+        midnight-padded timestamps.
+
         Args:
             df: The Polars DataFrame to display.
             title: Label for the expander header.
             **kwargs: Additional arguments passed to ``st.expander()``.
         """
+        config = {
+            name: st.column_config.DateColumn()
+            for name, dtype in df.schema.items()
+            if dtype == pl.Date
+        }
         with st.expander(f"{title} ({df.shape[0]} records)", **kwargs):
-            st.dataframe(df)
+            st.dataframe(df, column_config=config or None)
 
     def show_data(
         self,
