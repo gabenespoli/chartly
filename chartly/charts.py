@@ -74,6 +74,18 @@ def _polars_date_grouping_column(
     return col(date_col).dt.strftime(PERIOD_DATE_FORMATS.get(date_grouping, "%Y-%m-%d"))
 
 
+def _with_grouping_after_date(df: Optional[pl.DataFrame]) -> Optional[pl.DataFrame]:
+    """Return the frame with DateGrouping placed right after Date (and Id
+    first), leaving the rest in their current order. No-op when the required
+    columns are absent. Builds a new frame; the input is not mutated."""
+    cols = df.columns if df is not None else []
+    if df is None or "Date" not in cols or DATE_GROUPING_COL not in cols:
+        return df
+    head = [c for c in ("Id", "Date", DATE_GROUPING_COL) if c in cols]
+    rest = [c for c in cols if c not in head]
+    return df.select(head + rest)
+
+
 class Chart:
     """Interactive chart widget that renders Streamlit controls and a Plotly figure.
 
@@ -804,10 +816,18 @@ class Chart:
                 else {}
             )
 
+            graph_x = self.x
+            if (
+                self.date_grouping
+                and DATE_GROUPING_COL in df.columns
+                and self.x == self.date_col
+            ):
+                graph_x = DATE_GROUPING_COL
+
             self.fig = graphs.graph(
                 df,
                 y=self.y,
-                x=self.x,
+                x=graph_x,
                 color=self.color,
                 facet_col=self.facet_col,
                 facet_row=self.facet_row,
@@ -915,12 +935,22 @@ class Chart:
             if isinstance(data_chart, pl.DataFrame) and sort_col in data_chart.columns:
                 data_chart = data_chart.sort(sort_col, descending=sort_desc)
         if raw_data:
-            self.data_expander(data, f"{self.title} data", **kwargs)
+            self.data_expander(
+                _with_grouping_after_date(data), f"{self.title} data", **kwargs
+            )
         if chart_data:
             if chart_rows is not None:
-                self.data_expander(chart_rows, f"{self.title} chart data", **kwargs)
+                self.data_expander(
+                    _with_grouping_after_date(chart_rows),
+                    f"{self.title} chart data",
+                    **kwargs,
+                )
         if agg_data:
-            self.data_expander(data_chart, f"{self.title} aggregate data", **kwargs)
+            self.data_expander(
+                _with_grouping_after_date(data_chart),
+                f"{self.title} aggregate data",
+                **kwargs,
+            )
         if map_data and self.graph_type == "map":
             self.data_expander(
                 self.data_nomap, f"{self.title} data missing lat/lon", **kwargs
