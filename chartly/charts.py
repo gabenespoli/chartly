@@ -12,6 +12,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Tuple
 from typing import Union
 
 import pandas as pd
@@ -72,6 +73,77 @@ def _polars_date_grouping_column(
         year = col(date_col).dt.year().cast(pl.Utf8)
         return year + "-Q" + quarter
     return col(date_col).dt.strftime(PERIOD_DATE_FORMATS.get(date_grouping, "%Y-%m-%d"))
+
+
+def _period_start(period: str, date_grouping: str) -> date:
+    """Canonical start date of a DateGrouping label (inverse of the label
+    formatter in :func:`_polars_date_grouping_column`). Weekly and Bi-Weekly
+    periods start on the Monday of their ISO week."""
+    if date_grouping == "Daily":
+        return date.fromisoformat(period)
+    if date_grouping in ("Weekly", "Bi-Weekly"):
+        year, week = int(period[:4]), int(period.split("W")[1])
+        jan4 = date(year, 1, 4)  # Jan 4 is always in ISO week 1
+        return jan4 - timedelta(days=jan4.weekday()) + timedelta(weeks=week - 1)
+    if date_grouping == "Monthly":
+        return date(int(period[:4]), int(period[5:7]), 1)
+    if date_grouping == "Quarterly":
+        return date(int(period[:4]), (int(period[-1]) - 1) * 3 + 1, 1)
+    if date_grouping == "Yearly":
+        return date(int(period), 1, 1)
+    raise ValueError(f"Unknown date_grouping: {date_grouping!r}")
+
+
+def _period_label(d: date, date_grouping: str) -> str:
+    """DateGrouping label for a period start date (mirrors
+    :func:`_polars_date_grouping_column` in plain Python)."""
+    if date_grouping == "Weekly":
+        iso_year, iso_week, _ = d.isocalendar()
+        return f"{iso_year}-W{iso_week:02d}"
+    if date_grouping == "Bi-Weekly":
+        iso_year, iso_week, _ = d.isocalendar()
+        bi_week = (iso_week - 1) // 2 * 2 + 1
+        return f"{iso_year}-W{bi_week:02d}"
+    if date_grouping == "Quarterly":
+        return f"{d.year}-Q{(d.month - 1) // 3 + 1}"
+    if date_grouping == "Monthly":
+        return f"{d.year:04d}-{d.month:02d}"
+    if date_grouping == "Yearly":
+        return str(d.year)
+    return d.strftime("%Y-%m-%d")
+
+
+def _next_period_start(d: date, date_grouping: str) -> date:
+    """Start date of the period immediately after the one starting on `d`."""
+    if date_grouping == "Daily":
+        return d + timedelta(days=1)
+    if date_grouping == "Weekly":
+        return d + timedelta(weeks=1)
+    if date_grouping == "Bi-Weekly":
+        return d + timedelta(weeks=2)
+    if date_grouping == "Monthly":
+        return d + relativedelta(months=1)
+    if date_grouping == "Quarterly":
+        return d + relativedelta(months=3)
+    if date_grouping == "Yearly":
+        return d + relativedelta(years=1)
+    raise ValueError(f"Unknown date_grouping: {date_grouping!r}")
+
+
+def _complete_periods(labels: List[str], date_grouping: str) -> List[Tuple[date, str]]:
+    """Every (start, label) period pair between the min and max labels
+    (inclusive), so interior periods with no data are represented."""
+    if not labels:
+        return []
+    ordered = sorted(labels)
+    start = _period_start(ordered[0], date_grouping)
+    end = _period_start(ordered[-1], date_grouping)
+    periods = []
+    current = start
+    while current <= end:
+        periods.append((current, _period_label(current, date_grouping)))
+        current = _next_period_start(current, date_grouping)
+    return periods
 
 
 def _with_grouping_after_date(df: Optional[pl.DataFrame]) -> Optional[pl.DataFrame]:
@@ -138,6 +210,7 @@ class Chart:
         colormaps: Optional[Dict[str, Any]] = None,
         date_col: Optional[str] = None,
         date_grouping: Optional[str] = None,
+        show_empty_periods: bool = True,
         map_hover_cols: Optional[List[str]] = None,
         map_hover_name: Optional[str] = None,
     ) -> None:
@@ -181,6 +254,11 @@ class Chart:
             date_col: Name of the datetime column for date grouping.
             date_grouping: Initial date grouping to apply (overrides default_date_grouping
                 if provided).
+            show_empty_periods: If True (default), date grouping fills in
+                periods with no data as zero rows so every period between the
+                first and last present period is displayed. If False, empty
+                periods are skipped. May be overridden by
+                :meth:`get_date_grouping`.
             map_hover_cols: Additional columns to display on map hover tooltips.
             map_hover_name: Column whose values label map markers on hover.
 
@@ -209,6 +287,7 @@ class Chart:
         self.colormaps = colormaps
         self.date_col = date_col
         self.date_grouping = date_grouping
+        self.show_empty_periods = show_empty_periods
         self.min_date_grouping: Optional[str] = None
         self.max_date_grouping: Optional[str] = None
         self.data_chart = self.data
@@ -269,6 +348,7 @@ class Chart:
         date_col: str = "Datetime",
         grp_col: Optional[str] = None,
         extra_grp_cols: Optional[List[str]] = None,
+        show_empty_periods: bool = True,
     ) -> pl.DataFrame:
         """Aggregate a DataFrame by a time period, summing an 'Amount' column.
 
@@ -284,6 +364,12 @@ class Chart:
             date_col: Name of the datetime column to group on.
             grp_col: Optional additional column to include in the group-by.
             extra_grp_cols: Additional columns to include in the group-by.
+            show_empty_periods: If True (default), periods with no data
+                between the first and last present period are filled in with
+                zero rows — one per observed combination of the group-by
+                columns — so every period in that range is displayed. If
+                False, empty periods are skipped. Has no effect when
+                ``date_grouping`` is None.
 
         Returns:
             A new Polars DataFrame aggregated by the specified period with a
@@ -306,7 +392,48 @@ class Chart:
                 DATE_GROUPING_COL
             )
         )
+        if show_empty_periods and len(df):
+            df = Chart._fill_empty_periods(df, date_grouping, date_col, all_grp_cols)
         return df
+
+    @staticmethod
+    def _fill_empty_periods(
+        df: pl.DataFrame,
+        date_grouping: str,
+        date_col: str,
+        all_grp_cols: List[str],
+    ) -> pl.DataFrame:
+        """Add zero rows for periods (x observed group-by combinations) that
+        have no data, so empty periods still appear in charts."""
+        periods = _complete_periods(
+            df[DATE_GROUPING_COL].unique().to_list(), date_grouping
+        )
+        if not periods:
+            return df
+        grid = pl.DataFrame(
+            {
+                date_col: pl.Series(
+                    [start for start, _ in periods], dtype=df.schema[date_col]
+                ),
+                DATE_GROUPING_COL: pl.Series(
+                    [label for _, label in periods], dtype=pl.Utf8
+                ),
+            }
+        )
+        if all_grp_cols:
+            combos = df.select(all_grp_cols).unique()
+            grid = grid.join(combos, how="cross")
+        missing = grid.join(
+            df.select([DATE_GROUPING_COL, *all_grp_cols]),
+            on=[DATE_GROUPING_COL, *all_grp_cols],
+            how="anti",
+        )
+        if not len(missing):
+            return df
+        zeros = missing.with_columns(
+            pl.lit(0, dtype=df.schema[AMOUNT_COL]).alias(AMOUNT_COL)
+        ).select(df.columns)
+        return pl.concat([df, zeros]).sort(DATE_GROUPING_COL, *all_grp_cols)
 
     def get_date_grouping(
         self,
@@ -315,6 +442,7 @@ class Chart:
         default_max: Optional[str] = None,
         default_max_complete_period: Optional[date] = None,
         default_min_num_periods: Optional[int] = None,
+        show_empty_periods: Optional[bool] = None,
     ) -> None:
         """Render a date grouping selector and optional date range filter.
 
@@ -335,6 +463,10 @@ class Chart:
                 date.
             default_min_num_periods: If set, automatically compute
                 ``default_min`` as this many periods before ``default_max``.
+            show_empty_periods: Initial value of the "Show empty periods"
+                checkbox. Falls back to ``self.show_empty_periods`` (set via
+                the constructor). The checkbox updates
+                ``self.show_empty_periods``.
         """
         default = default or self.default_date_grouping
         if default in DATE_GROUPING_MAP:
@@ -345,6 +477,13 @@ class Chart:
             label="Date grouping",
             options=[None, *DATE_GROUPING_MAP.keys()],
             index=index,
+        )
+        if show_empty_periods is not None:
+            self.show_empty_periods = show_empty_periods
+        self.show_empty_periods = st.checkbox(
+            label="Show empty periods",
+            value=self.show_empty_periods,
+            key=f"{self.id}_show_empty_periods",
         )
         self.add_date_grouping_column()
         if default_max is None and default_max_complete_period is not None:
@@ -745,6 +884,7 @@ class Chart:
                 if self.bar_group and self.barmode == "grouped+stacked"
                 else None
             ),
+            show_empty_periods=self.show_empty_periods,
         )
         if (
             self.date_grouping
@@ -935,10 +1075,7 @@ class Chart:
         if sort_col is not None:
             if isinstance(data, pl.DataFrame) and sort_col in data.columns:
                 data = data.sort(sort_col, descending=sort_desc)
-            if (
-                chart_rows is not None
-                and sort_col in chart_rows.columns
-            ):
+            if chart_rows is not None and sort_col in chart_rows.columns:
                 chart_rows = chart_rows.sort(sort_col, descending=sort_desc)
             if isinstance(data_chart, pl.DataFrame) and sort_col in data_chart.columns:
                 data_chart = data_chart.sort(sort_col, descending=sort_desc)

@@ -684,7 +684,7 @@ chart.<span class="fn">show_figure</span>()</pre>
             </div>
             <div class="api-card" id="chart-get-date-grouping">
                 <h4>chart.get_date_grouping(default, ...)</h4>
-                <p>Render a date grouping selector (Daily through Yearly) and optional min/max date range filter. When a grouping is set, the chart's x-axis and the min/max selectors display the period labels (e.g. <code>2026-W14</code>), not raw dates.</p>
+                <p>Render a date grouping selector (Daily through Yearly) and optional min/max date range filter. When a grouping is set, the chart's x-axis and the min/max selectors display the period labels (e.g. <code>2026-W14</code>), not raw dates. Also renders a "Show empty periods" checkbox (initial value from <code>show_empty_periods</code>) controlling whether periods with no data are displayed as zero.</p>
             </div>
             <div class="api-card" id="chart-show-data">
                 <h4>chart.show_data(raw_data, chart_data, agg_data, map_data, ...)</h4>
@@ -692,7 +692,7 @@ chart.<span class="fn">show_figure</span>()</pre>
             </div>
             <div class="api-card" id="chart-group-by-date">
                 <h4>Chart.group_by_date(df, date_grouping, date_col, ...)</h4>
-                <p>Static method. Aggregate a DataFrame by time period, summing an <code>Amount</code> column. Adds a <code>DateGrouping</code> label column.</p>
+                <p>Static method. Aggregate a DataFrame by time period, summing an <code>Amount</code> column. Adds a <code>DateGrouping</code> label column. By default (<code>show_empty_periods=True</code>), periods with no data between the first and last present period are filled in with zero rows so every period is displayed; pass <code>show_empty_periods=False</code> to skip them.</p>
             </div>
             <div class="api-card" id="chart-header">
                 <h4>Chart.header(title)</h4>
@@ -720,6 +720,7 @@ chart.<span class="fn">show_figure</span>()</pre>
             <tr><td>default_size</td><td>Default column for marker/bubble size</td></tr>
             <tr><td>default_marginal</td><td>Marginal plot type for scatter (box, histogram, rug, violin)</td></tr>
             <tr><td>default_date_grouping</td><td>Default time aggregation level</td></tr>
+            <tr><td>show_empty_periods</td><td>Whether date grouping displays periods with no data as zero (default True)</td></tr>
             <tr><td>default_height</td><td>Chart height in pixels</td></tr>
             <tr><td>colormaps</td><td>Dict mapping column names to color dicts, e.g. <code>{"Status": {"Active": "green"}}</code></td></tr>
             <tr><td>date_col</td><td>Datetime column for date grouping</td></tr>

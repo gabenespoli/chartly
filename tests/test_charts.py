@@ -66,11 +66,197 @@ def test_highlight_regions_skips_non_bar_charts():
 
 
 def test_group_by_date_pandas_input_monthly(date_df_pandas):
-    """pandas input is converted at the boundary; polars grouping skips months
-    with no rows instead of emitting empty buckets."""
+    """pandas input is converted at the boundary; months with no rows are
+    filled in with zero rows by default."""
     out = Chart.group_by_date(date_df_pandas, "Monthly", date_col="Datetime")
     assert isinstance(out, pl.DataFrame)
+    assert list(out["DateGrouping"]) == ["2024-01", "2024-02", "2024-03", "2024-04"]
+    assert list(out["Amount"]) == [2, 0, 3, 5]
+
+
+def test_group_by_date_skip_empty_periods(date_df_pandas):
+    out = Chart.group_by_date(
+        date_df_pandas, "Monthly", date_col="Datetime", show_empty_periods=False
+    )
     assert list(out["DateGrouping"]) == ["2024-01", "2024-03", "2024-04"]
+
+
+def test_group_by_date_fills_quarterly_gap():
+    df = pd.DataFrame(
+        {
+            "Datetime": pd.to_datetime(["2024-01-05", "2024-07-15"]),
+            "Amount": [1, 7],
+        }
+    )
+    out = Chart.group_by_date(df, "Quarterly", date_col="Datetime")
+    assert list(out["DateGrouping"]) == ["2024-Q1", "2024-Q2", "2024-Q3"]
+    assert list(out["Amount"]) == [1, 0, 7]
+
+
+def test_group_by_date_fills_daily_gap():
+    df = pd.DataFrame(
+        {
+            "Datetime": pd.to_datetime(["2024-01-05", "2024-01-07"]),
+            "Amount": [1, 3],
+        }
+    )
+    out = Chart.group_by_date(df, "Daily", date_col="Datetime")
+    assert list(out["DateGrouping"]) == ["2024-01-05", "2024-01-06", "2024-01-07"]
+    assert list(out["Amount"]) == [1, 0, 3]
+
+
+def test_group_by_date_fills_weekly_gap():
+    df = pd.DataFrame(
+        {
+            "Datetime": pd.to_datetime(["2024-01-05", "2024-01-19"]),
+            "Amount": [1, 3],
+        }
+    )
+    out = Chart.group_by_date(df, "Weekly", date_col="Datetime")
+    assert list(out["DateGrouping"]) == ["2024-W01", "2024-W02", "2024-W03"]
+    assert list(out["Amount"]) == [1, 0, 3]
+
+
+def test_group_by_date_fills_biweekly_gap():
+    df = pd.DataFrame(
+        {
+            "Datetime": pd.to_datetime(["2024-01-05", "2024-02-02"]),
+            "Amount": [1, 3],
+        }
+    )
+    out = Chart.group_by_date(df, "Bi-Weekly", date_col="Datetime")
+    assert list(out["DateGrouping"]) == ["2023-W51", "2024-W01", "2024-W03"]
+    assert list(out["Amount"]) == [1, 0, 3]
+
+
+def test_group_by_date_fills_yearly_gap():
+    df = pd.DataFrame(
+        {
+            "Datetime": pd.to_datetime(["2024-01-05", "2026-01-05"]),
+            "Amount": [1, 3],
+        }
+    )
+    out = Chart.group_by_date(df, "Yearly", date_col="Datetime")
+    assert list(out["DateGrouping"]) == ["2024", "2025", "2026"]
+    assert list(out["Amount"]) == [1, 0, 3]
+
+
+def test_group_by_date_fills_observed_group_combinations(date_df_pandas):
+    df = date_df_pandas.copy()
+    df["cat"] = ["a", "a", "b", "b"]
+    out = Chart.group_by_date(df, "Monthly", date_col="Datetime", grp_col="cat")
+    pairs = sorted(zip(out["DateGrouping"], out["cat"], out["Amount"]))
+    assert pairs == [
+        ("2024-01", "a", 2),
+        ("2024-01", "b", 0),
+        ("2024-02", "a", 0),
+        ("2024-02", "b", 0),
+        ("2024-03", "a", 0),
+        ("2024-03", "b", 3),
+        ("2024-04", "a", 0),
+        ("2024-04", "b", 5),
+    ]
+    assert out["Amount"].sum() == 10
+
+
+def test_group_by_date_preserves_amount_dtype(date_df_pandas):
+    out = Chart.group_by_date(date_df_pandas, "Monthly", date_col="Datetime")
+    assert out.schema["Amount"] == pl.Int64
+    float_df = pl.DataFrame(
+        {
+            "Datetime": [date(2024, 1, 5), date(2024, 3, 5)],
+            "Amount": [1.5, 2.5],
+        }
+    )
+    out = Chart.group_by_date(float_df, "Monthly")
+    assert out.schema["Amount"] == pl.Float64
+    assert list(out["Amount"]) == [1.5, 0.0, 2.5]
+
+
+def test_group_by_date_no_grouping_returns_input_unchanged(date_df_pandas):
+    out = Chart.group_by_date(date_df_pandas, None)
+    assert isinstance(out, pl.DataFrame)
+    assert out.shape[0] == 4
+    assert "DateGrouping" not in out.columns
+
+
+def test_group_by_date_empty_frame():
+    df = pl.DataFrame(
+        {
+            "Datetime": pl.Series([], dtype=pl.Date),
+            "Amount": pl.Series([], dtype=pl.Float64),
+        }
+    )
+    out = Chart.group_by_date(df, "Monthly")
+    assert out.shape[0] == 0
+
+
+def make_monthly_chart(graph_type="bar", grouped_stacked=False, show_empty=True):
+    df = pl.DataFrame(
+        {
+            "Datetime": [
+                date(2024, 1, 5),
+                date(2024, 1, 6),
+                date(2024, 3, 5),
+                date(2024, 3, 6),
+            ],
+            "Amount": [1.0, 2.0, 3.0, 4.0],
+            "cat": ["a", "b", "a", "b"],
+            "grp": ["x", "y", "x", "y"],
+        }
+    )
+    chart = Chart(
+        id=f"gap-{graph_type}-{grouped_stacked}-{show_empty}",
+        data=df,
+        y_opts=["Amount"],
+        x_opts=["Datetime"],
+        color_opts=["cat", "grp"],
+        date_col="Datetime",
+        show_empty_periods=show_empty,
+    )
+    chart.date_grouping = "Monthly"
+    chart.min_date_grouping = "2024-01"
+    chart.max_date_grouping = "2024-03"
+    chart.color = "cat"
+    chart.graph_type = graph_type
+    if grouped_stacked:
+        chart.barmode = "grouped+stacked"
+        chart.bar_group = "grp"
+    return chart
+
+
+def test_update_figure_grouped_stacked_shows_empty_period():
+    chart = make_monthly_chart(grouped_stacked=True)
+    chart.update_figure()
+    assert list(chart.fig.layout.xaxis.ticktext) == ["2024-01", "2024-02", "2024-03"]
+    for trace in chart.fig.data:
+        assert list(trace.y)[1] == 0.0
+
+
+def test_update_figure_grouped_stacked_hides_empty_periods_when_disabled():
+    chart = make_monthly_chart(grouped_stacked=True, show_empty=False)
+    chart.update_figure()
+    assert list(chart.fig.layout.xaxis.ticktext) == ["2024-01", "2024-03"]
+
+
+def test_update_figure_bar_shows_empty_period():
+    chart = make_monthly_chart()
+    chart.update_figure()
+    assert list(chart.fig.layout.xaxis.categoryarray) == [
+        "2024-01",
+        "2024-02",
+        "2024-03",
+    ]
+
+
+def test_update_figure_line_shows_empty_period():
+    chart = make_monthly_chart(graph_type="line")
+    chart.update_figure()
+    assert list(chart.fig.layout.xaxis.categoryarray) == [
+        "2024-01",
+        "2024-02",
+        "2024-03",
+    ]
 
 
 def test_group_by_date_pandas_quarterly(date_df_pandas):

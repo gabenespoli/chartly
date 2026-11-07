@@ -96,7 +96,7 @@ chart.update_figure()
 chart.show_figure()
 ```
 
-Users can switch between Daily, Weekly, Bi-Weekly, Monthly, Quarterly, and Yearly aggregation with a single dropdown.
+Users can switch between Daily, Weekly, Bi-Weekly, Monthly, Quarterly, and Yearly aggregation with a single dropdown. Periods with no data are shown as zero by default (toggle with the "Show empty periods" checkbox, or pass `show_empty_periods=False` to `Chart(...)` / `Chart.group_by_date(...)` to skip them).
 
 ---
 
