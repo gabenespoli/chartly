@@ -64,8 +64,14 @@ def test_compact_show_figure_hides_modebar_and_top_margin(monkeypatch):
     chart.fig = go.Figure()
     chart.show_figure()
 
-    assert plotly_chart.call_args.kwargs["config"] == {"displayModeBar": False}
+    assert plotly_chart.call_args.kwargs["config"] == {
+        "displayModeBar": False,
+        "scrollZoom": False,
+    }
     assert chart.fig.layout.margin.t == 0
+    assert chart.fig.layout.dragmode is False
+    assert chart.fig.layout.xaxis.fixedrange is True
+    assert chart.fig.layout.yaxis.fixedrange is True
     assert chart.fig.layout.legend.orientation == "h"
     assert chart.fig.layout.legend.yanchor == "bottom"
     assert chart.fig.layout.legend.y == -0.3

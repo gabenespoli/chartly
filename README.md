@@ -64,10 +64,10 @@ That's it. Your users now have interactive dropdowns to:
 ### Compact Mode
 
 Pass `compact=True` to hide the title, render the chart controls in a "Chart
-Options" expander in `st.sidebar`, hide the Plotly modebar, trim the space
-above the chart, and place the legend at the bottom. The graph then appears at
-the top of the main area. Construct the chart after any other sidebar widgets
-if you want the controls at the bottom of the sidebar.
+Options" expander in `st.sidebar`, hide the Plotly modebar, disable zooming,
+trim the space above the chart, and place the legend at the bottom. The graph
+then appears at the top of the main area. Construct the chart after any other
+sidebar widgets if you want the controls at the bottom of the sidebar.
 
 ```python
 chart = Chart(
