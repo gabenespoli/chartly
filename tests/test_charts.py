@@ -1,11 +1,13 @@
 import warnings
 from datetime import date
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pandas as pd
 import polars as pl
 import pytest
 
+import chartly.charts as charts
 from chartly import Chart
 
 warnings.filterwarnings("ignore")
@@ -20,6 +22,90 @@ def make_chart(graph_type: str) -> Chart:
         x_opts=["region"],
         default_graph_type=graph_type,
     )
+
+
+def test_compact_renders_header_controls_in_sidebar(monkeypatch):
+    df = pl.DataFrame({"region": ["a", "b"], "amount": [1, 2]})
+    sidebar = MagicMock()
+    header = MagicMock()
+    monkeypatch.setattr(charts.st, "sidebar", sidebar)
+    monkeypatch.setattr(Chart, "header", header)
+
+    Chart(id="compact", data=df, y_opts=["amount"], x_opts=["region"], compact=True)
+
+    header.assert_not_called()
+    sidebar.subheader.assert_not_called()
+    sidebar.popover.assert_not_called()
+    sidebar.expander.assert_called_once_with("Chart Options")
+    expander = sidebar.expander.return_value
+    sidebar.markdown.assert_called_once()
+    assert "padding-top: 0" in sidebar.markdown.call_args.args[0]
+    assert sidebar.selectbox.call_count == 0
+    assert expander.selectbox.call_count == 10
+    expander.empty.assert_called_once()
+    expander.empty.return_value.selectbox.assert_called_once()
+
+
+def test_compact_show_figure_hides_modebar_and_top_margin(monkeypatch):
+    go = pytest.importorskip("plotly.graph_objects")
+    df = pl.DataFrame({"region": ["a", "b"], "amount": [1, 2]})
+    sidebar = MagicMock()
+    plotly_chart = MagicMock()
+    monkeypatch.setattr(charts.st, "sidebar", sidebar)
+    monkeypatch.setattr(charts.st, "plotly_chart", plotly_chart)
+
+    chart = Chart(
+        id="compact-fig",
+        data=df,
+        y_opts=["amount"],
+        x_opts=["region"],
+        compact=True,
+    )
+    chart.fig = go.Figure()
+    chart.show_figure()
+
+    assert plotly_chart.call_args.kwargs["config"] == {"displayModeBar": False}
+    assert chart.fig.layout.margin.t == 0
+    assert chart.fig.layout.legend.orientation == "h"
+    assert chart.fig.layout.legend.yanchor == "bottom"
+    assert chart.fig.layout.legend.y == -0.3
+    assert chart.fig.layout.legend.xanchor == "center"
+    assert chart.fig.layout.legend.x == 0.5
+
+
+def test_non_compact_show_figure_keeps_default_plotly_config(monkeypatch):
+    go = pytest.importorskip("plotly.graph_objects")
+    df = pl.DataFrame({"region": ["a", "b"], "amount": [1, 2]})
+    cols = [MagicMock() for _ in range(5)]
+    plotly_chart = MagicMock()
+    monkeypatch.setattr(Chart, "header", MagicMock(return_value=cols))
+    monkeypatch.setattr(charts.st, "plotly_chart", plotly_chart)
+
+    chart = Chart(id="normal-fig", data=df, y_opts=["amount"], x_opts=["region"])
+    chart.fig = go.Figure()
+    chart.show_figure()
+
+    assert "config" not in plotly_chart.call_args.kwargs
+    assert chart.fig.layout.legend.orientation is None
+
+
+def test_non_compact_renders_header_controls_in_main_area(monkeypatch):
+    df = pl.DataFrame({"region": ["a", "b"], "amount": [1, 2]})
+    cols = [MagicMock() for _ in range(5)]
+    header = MagicMock(return_value=cols)
+    sidebar = MagicMock()
+    monkeypatch.setattr(charts.st, "sidebar", sidebar)
+    monkeypatch.setattr(Chart, "header", header)
+
+    Chart(id="normal", data=df, y_opts=["amount"], x_opts=["region"])
+
+    header.assert_called_once()
+    assert sidebar.selectbox.call_count == 0
+    sidebar.expander.assert_not_called()
+    cols[1].selectbox.assert_called_once()
+    cols[2].selectbox.assert_called_once()
+    cols[3].selectbox.assert_called_once()
+    cols[4].popover.assert_called_once_with("Options")
 
 
 @pytest.fixture

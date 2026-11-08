@@ -672,7 +672,7 @@ chart.<span class="fn">show_figure</span>()</pre>
         <div class="api-grid">
             <div class="api-card" id="chart-init">
                 <h4>Chart(id, data, ...)</h4>
-                <p>Initialize the chart with a DataFrame and display options. Automatically renders selector widgets for graph type, x, y, color, facets, size, bar mode, marginals, and height.</p>
+                <p>Initialize the chart with a DataFrame and display options. Automatically renders selector widgets for graph type, x, y, color, facets, size, bar mode, marginals, and height. Set <code>compact=True</code> to hide the title and render the controls in a "Chart Options" expander in <code>st.sidebar</code>.</p>
             </div>
             <div class="api-card" id="chart-update-figure">
                 <h4>chart.update_figure(**kwargs)</h4>
@@ -721,6 +721,7 @@ chart.<span class="fn">show_figure</span>()</pre>
             <tr><td>default_marginal</td><td>Marginal plot type for scatter (box, histogram, rug, violin)</td></tr>
             <tr><td>default_date_grouping</td><td>Default time aggregation level</td></tr>
             <tr><td>show_empty_periods</td><td>Whether date grouping displays periods with no data as zero (default True)</td></tr>
+            <tr><td>compact</td><td>Hide the title, render chart controls in a "Chart Options" expander in the Streamlit sidebar, hide the Plotly modebar, trim top spacing, and move the legend to the bottom (default False)</td></tr>
             <tr><td>default_height</td><td>Chart height in pixels</td></tr>
             <tr><td>colormaps</td><td>Dict mapping column names to color dicts, e.g. <code>{"Status": {"Active": "green"}}</code></td></tr>
             <tr><td>date_col</td><td>Datetime column for date grouping</td></tr>

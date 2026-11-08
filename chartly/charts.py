@@ -213,6 +213,7 @@ class Chart:
         show_empty_periods: bool = True,
         map_hover_cols: Optional[List[str]] = None,
         map_hover_name: Optional[str] = None,
+        compact: bool = False,
     ) -> None:
         """Initialize the Chart widget and render option controls.
 
@@ -261,6 +262,9 @@ class Chart:
                 :meth:`get_date_grouping`.
             map_hover_cols: Additional columns to display on map hover tooltips.
             map_hover_name: Column whose values label map markers on hover.
+            compact: If True, hide the title and render the header controls in a
+                "Chart Options" expander in ``st.sidebar``. All option controls
+                are flattened into the expander with no separate popover.
 
         Note:
             Rendering Streamlit widgets in the constructor mixes object construction
@@ -270,6 +274,7 @@ class Chart:
         """
         self.id = id
         self.title = title or id
+        self.compact = compact
         # pandas input is converted once here; everything downstream is polars
         self.data = utils.ensure_polars(data)
         data = self.data
@@ -692,40 +697,61 @@ class Chart:
 
         Creates the header row, axis selectors (x, y, color), and an options
         popover containing graph type, facets, size, bar mode, marginals,
-        height, orientation, and legend sorting controls. Sets instance
-        attributes (``self.graph_type``, ``self.y``, ``self.x``, ``self.color``,
-        etc.) based on user selections.
+        height, orientation, and legend sorting controls. In compact mode the
+        title is omitted and the same controls are flattened into a "Chart
+        Options" expander in ``st.sidebar``. Sets instance attributes
+        (``self.graph_type``, ``self.y``, ``self.x``, ``self.color``, etc.)
+        based on user selections.
         """
-        cols = self.header(self.title)
-        cols[4].write(self._popover_chart_options_style(), unsafe_allow_html=True)
-        options_popup = cols[4].popover("Options")
-
-        self.graph_type = options_popup.selectbox(
+        graph_type_kwargs = dict(
             label="Graph Type",
             options=self.graph_types,
             index=self.graph_types.index(self.default_graph_type),
             key=f"{self.id}_graph_type",
         )
-
-        self.y = cols[1].selectbox(
+        y_kwargs = dict(
             label="y",
             options=self.y_opts,
             index=self.y_opts.index(self.default_y),
             key=f"{self.id}_y",
         )
-        self.x = cols[2].selectbox(
+        x_kwargs = dict(
             label="x",
             options=self.x_opts,
             index=self.x_opts.index(self.default_x),
             key=f"{self.id}_x",
         )
-        self.color = cols[3].selectbox(
+        color_kwargs = dict(
             label="Color",
             options=self.color_opts,
             index=self.color_opts.index(self.default_color),
             key=f"{self.id}_color",
-            disabled=self.graph_type == "donut",
         )
+
+        if self.compact:
+            st.sidebar.markdown(
+                "<style>.stMainBlockContainer, .block-container "
+                "{ padding-top: 0; }</style>",
+                unsafe_allow_html=True,
+            )
+            options_popup = st.sidebar.expander("Chart Options")
+            self.y = options_popup.selectbox(**y_kwargs)
+            self.x = options_popup.selectbox(**x_kwargs)
+            color_container = options_popup.empty()
+            self.graph_type = options_popup.selectbox(**graph_type_kwargs)
+            self.color = color_container.selectbox(
+                **color_kwargs, disabled=self.graph_type == "donut"
+            )
+        else:
+            cols = self.header(self.title)
+            cols[4].write(self._popover_chart_options_style(), unsafe_allow_html=True)
+            options_popup = cols[4].popover("Options")
+            self.graph_type = options_popup.selectbox(**graph_type_kwargs)
+            self.y = cols[1].selectbox(**y_kwargs)
+            self.x = cols[2].selectbox(**x_kwargs)
+            self.color = cols[3].selectbox(
+                **color_kwargs, disabled=self.graph_type == "donut"
+            )
         _is_grouped_stacked = (
             st.session_state.get(f"{self.id}_barmode") == "grouped+stacked"
         )
@@ -998,14 +1024,31 @@ class Chart:
                 container width. ``"content"`` uses the figure's native width.
                 An integer pixel value is also accepted.
 
+        In compact mode the Plotly modebar is hidden, the figure's top margin
+        is removed, and the legend is placed at the bottom.
+
         Raises:
             Displays a Streamlit error if :meth:`update_figure` has not been called.
         """
         if self.fig is not None:
+            chart_kwargs = {}
+            if self.compact:
+                self.fig.update_layout(
+                    margin=dict(t=0),
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=-0.3,
+                        xanchor="center",
+                        x=0.5,
+                    ),
+                )
+                chart_kwargs["config"] = {"displayModeBar": False}
             st.plotly_chart(
                 self.fig,
                 width=width,
                 key=f"{self.id}_plotly_chart",
+                **chart_kwargs,
             )
         else:
             st.error("Figure is not updated. Call Chart.update_figure() first.")
