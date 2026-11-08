@@ -153,7 +153,7 @@ def test_grouped_stacked_bar_legend_value_average():
     # two x periods (jan, feb); per-group sums: east b=8, east a=2,
     # west a=14, west b=10 -> averages 4, 1, 7, 5
     shown = [t.name for t in fig.data if t.showlegend]
-    assert shown == ["b (Ω 4)", "a (Ω 1)"]
+    assert shown == ["b (µ 4)", "a (µ 1)"]
 
 
 def make_periods_df() -> pl.DataFrame:
@@ -178,7 +178,7 @@ def test_legend_value_average_divides_by_periods():
     )
     names = [t.name for t in fig.data]
     # sums 18 and 12 over 3 periods -> 6 and 4
-    assert names == ["a (Ω 6)", "b (Ω 4)"]
+    assert names == ["a (µ 6)", "b (µ 4)"]
 
 
 def test_legend_value_sum_uses_sum_marker():

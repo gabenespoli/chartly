@@ -248,7 +248,7 @@ class Chart:
             default_orientation_h: If True, default to horizontal bars.
             default_sort_legend_by_value: If True, sort legend entries by total value.
             default_legend_value: What the legend label value represents when legend
-                sorting is enabled — "sum" (∑, total) or "average" (Ω, sum divided by
+                sorting is enabled — "sum" (∑, total) or "average" (µ, sum divided by
                 the number of unique x periods shown).
             colormaps: Dictionary mapping column names to color maps
                 (e.g., ``{"Status": {"Active": "green", "Inactive": "red"}}``).

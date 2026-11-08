@@ -73,7 +73,7 @@ def millify(
     return "{0}{dx}".format(result, dx=millnames[millidx])
 
 
-LEGEND_VALUE_SYMBOLS = {"sum": "∑", "average": "Ω"}
+LEGEND_VALUE_SYMBOLS = {"sum": "∑", "average": "µ"}
 
 
 def _legend_symbol(legend_value: str) -> str:
@@ -222,7 +222,7 @@ def _grouped_stacked_bar(
             )
             sorted_combinations = [(r["_group"], r["_stack"]) for r in ordered]
 
-        # Create legend names with values; sum (∑) or average per x period (Ω)
+        # Create legend names with values; sum (∑) or average per x period (µ)
         legend_name_map = {
             (r["_group"], r["_stack"]): (
                 f"{r['_stack']} ({symbol} {millify(r[value_col] / divisor)})"
@@ -368,10 +368,10 @@ def graph(
         color_matches_xy: If True and no color column is set, use the x/y
             grouping column as the color.
         sort_legend_by_value: Sort legend entries by their total value
-            (descending), appending the sum (∑) or average (Ω) per x period to
+            (descending), appending the sum (∑) or average (µ) per x period to
             each legend label.
         legend_value: What the legend label value represents — "sum" (∑,
-            total) or "average" (Ω, sum divided by the number of unique x
+            total) or "average" (µ, sum divided by the number of unique x
             periods shown). Only used when ``sort_legend_by_value`` is True.
         pre_agg_for_text_auto: Pre-aggregate data so text labels show correct
             totals per bar segment.
