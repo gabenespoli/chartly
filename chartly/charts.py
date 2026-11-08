@@ -1025,7 +1025,8 @@ class Chart:
                 An integer pixel value is also accepted.
 
         In compact mode the Plotly modebar is hidden, the figure's top margin
-        is removed, the legend is placed at the bottom, and zooming is disabled.
+        is removed, the legend is placed at the bottom with reserved space so it
+        clears the x-axis labels, and zooming is disabled.
 
         Raises:
             Displays a Streamlit error if :meth:`update_figure` has not been called.
@@ -1034,14 +1035,16 @@ class Chart:
             chart_kwargs = {}
             if self.compact:
                 self.fig.update_layout(
-                    margin=dict(t=0),
+                    margin=dict(t=0, b=140),
                     dragmode=False,
                     legend=dict(
                         orientation="h",
-                        yanchor="bottom",
-                        y=-0.3,
-                        xanchor="center",
+                        xref="container",
+                        yref="container",
                         x=0.5,
+                        xanchor="center",
+                        y=0.01,
+                        yanchor="bottom",
                     ),
                 )
                 self.fig.update_xaxes(fixedrange=True)

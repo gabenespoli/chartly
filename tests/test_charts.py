@@ -69,12 +69,15 @@ def test_compact_show_figure_hides_modebar_and_top_margin(monkeypatch):
         "scrollZoom": False,
     }
     assert chart.fig.layout.margin.t == 0
+    assert chart.fig.layout.margin.b == 140
     assert chart.fig.layout.dragmode is False
     assert chart.fig.layout.xaxis.fixedrange is True
     assert chart.fig.layout.yaxis.fixedrange is True
     assert chart.fig.layout.legend.orientation == "h"
+    assert chart.fig.layout.legend.xref == "container"
+    assert chart.fig.layout.legend.yref == "container"
     assert chart.fig.layout.legend.yanchor == "bottom"
-    assert chart.fig.layout.legend.y == -0.3
+    assert chart.fig.layout.legend.y == 0.01
     assert chart.fig.layout.legend.xanchor == "center"
     assert chart.fig.layout.legend.x == 0.5
 
